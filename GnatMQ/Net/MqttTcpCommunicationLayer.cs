@@ -12,23 +12,27 @@ and the Eclipse Distribution License is available at
 
 Contributors:
    Paolo Patierno - initial API and implementation and/or initial documentation
+   David Kristensen - optimalization for the azure platform
 */
 
-using System;
 #if SSL
 #if (MF_FRAMEWORK_VERSION_V4_2 || MF_FRAMEWORK_VERSION_V4_3)
 using Microsoft.SPOT.Net.Security;
 #else
-using System.Net.Security;
 #endif
 #endif
-using System.Net;
-using System.Net.Sockets;
-using System.Security.Cryptography.X509Certificates;
-using System.Threading;
 
-namespace uPLibrary.Networking.M2Mqtt.Communication
+namespace GnatMQForAzure.Net
 {
+    using System;
+    using System.Net;
+    using System.Net.Security;
+    using System.Net.Sockets;
+    using System.Security.Cryptography.X509Certificates;
+    using System.Threading;
+
+    using GnatMQForAzure.Communication;
+
     /// <summary>
     /// MQTT communication layer
     /// </summary>

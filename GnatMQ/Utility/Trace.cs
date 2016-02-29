@@ -12,12 +12,13 @@ and the Eclipse Distribution License is available at
 
 Contributors:
    Paolo Patierno - initial API and implementation and/or initial documentation
+   David Kristensen - optimalization for the azure platform
 */
 
-using System.Diagnostics;
-
-namespace uPLibrary.Networking.M2Mqtt.Utility
+namespace GnatMQForAzure.Utility
 {
+    using System.Diagnostics;
+
     /// <summary>
     /// Tracing levels
     /// </summary>

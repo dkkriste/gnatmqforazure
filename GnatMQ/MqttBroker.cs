@@ -12,28 +12,33 @@ and the Eclipse Distribution License is available at
 
 Contributors:
    Paolo Patierno - initial API and implementation and/or initial documentation
+   David Kristensen - optimalization for the azure platform
 */
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using uPLibrary.Networking.M2Mqtt.Messages;
-using uPLibrary.Networking.M2Mqtt.Exceptions;
-using uPLibrary.Networking.M2Mqtt.Managers;
-using uPLibrary.Networking.M2Mqtt.Communication;
-using uPLibrary.Networking.M2Mqtt.Session;
 #if SSL
 #if !(WINDOWS_APP || WINDOWS_PHONE_APP)
-using System.Security.Cryptography.X509Certificates;
-using System.Net.Security;
+
 #elif (MF_FRAMEWORK_VERSION_V4_2 || MF_FRAMEWORK_VERSION_V4_3)
 using Microsoft.SPOT.Net.Security;
 #endif
 #endif
 
-namespace uPLibrary.Networking.M2Mqtt
+namespace GnatMQForAzure
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Net.Security;
+    using System.Security.Cryptography.X509Certificates;
+    using System.Text;
+
+    using GnatMQForAzure.Communication;
+    using GnatMQForAzure.Exceptions;
+    using GnatMQForAzure.Managers;
+    using GnatMQForAzure.Messages;
+    using GnatMQForAzure.Net;
+    using GnatMQForAzure.Session;
+
     /// <summary>
     /// MQTT broker business logic
     /// </summary>

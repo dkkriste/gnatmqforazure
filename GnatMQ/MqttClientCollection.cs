@@ -12,16 +12,14 @@ and the Eclipse Distribution License is available at
 
 Contributors:
    Paolo Patierno - initial API and implementation and/or initial documentation
+   David Kristensen - optimalization for the azure platform
 */
 
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
-namespace uPLibrary.Networking.M2Mqtt
+namespace GnatMQForAzure
 {
+    using System.Collections;
+    using System.Collections.Generic;
+
     /// <summary>
     /// MQTT client collection
     /// </summary>

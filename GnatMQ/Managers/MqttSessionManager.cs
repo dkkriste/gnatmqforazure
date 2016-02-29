@@ -12,19 +12,17 @@ and the Eclipse Distribution License is available at
 
 Contributors:
    Paolo Patierno - initial API and implementation and/or initial documentation
+   David Kristensen - optimalization for the azure platform
 */
 
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
-using uPLibrary.Networking.M2Mqtt.Messages;
-using uPLibrary.Networking.M2Mqtt.Session;
-
-namespace uPLibrary.Networking.M2Mqtt.Managers
+namespace GnatMQForAzure.Managers
 {
+    using System.Collections;
+    using System.Collections.Generic;
+
+    using GnatMQForAzure.Messages;
+    using GnatMQForAzure.Session;
+
     /// <summary>
     /// Manager for client session
     /// </summary>

@@ -12,16 +12,17 @@ and the Eclipse Distribution License is available at
 
 Contributors:
    Paolo Patierno - initial API and implementation and/or initial documentation
+   David Kristensen - optimalization for the azure platform
 */
 
 #if BROKER
-using System.Collections;
-using System.Collections.Generic;
-using uPLibrary.Networking.M2Mqtt.Managers;
-using uPLibrary.Networking.M2Mqtt.Messages;
-
-namespace uPLibrary.Networking.M2Mqtt.Session
+namespace GnatMQForAzure.Session
 {
+    using System.Collections.Generic;
+
+    using GnatMQForAzure.Managers;
+    using GnatMQForAzure.Messages;
+
     /// <summary>
     /// MQTT Broker Session
     /// </summary>

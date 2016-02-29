@@ -12,16 +12,19 @@ and the Eclipse Distribution License is available at
 
 Contributors:
    Paolo Patierno - initial API and implementation and/or initial documentation
+   David Kristensen - optimalization for the azure platform
 */
 
 #if (!MF_FRAMEWORK_VERSION_V4_2 && !MF_FRAMEWORK_VERSION_V4_3)
-using System;
+
 #else
 using Microsoft.SPOT;
 #endif
 
-namespace uPLibrary.Networking.M2Mqtt.Messages
+namespace GnatMQForAzure.Messages
 {
+    using System;
+
     /// <summary>
     /// Event Args class for subscribe request on topics
     /// </summary>

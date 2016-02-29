@@ -12,12 +12,13 @@ and the Eclipse Distribution License is available at
 
 Contributors:
    Paolo Patierno - initial API and implementation and/or initial documentation
+   David Kristensen - optimalization for the azure platform
 */
 
-using uPLibrary.Networking.M2Mqtt.Messages;
-
-namespace uPLibrary.Networking.M2Mqtt.Internal
+namespace GnatMQForAzure.Internal
 {
+    using GnatMQForAzure.Messages;
+
     /// <summary>
     /// Internal event with a message
     /// </summary>

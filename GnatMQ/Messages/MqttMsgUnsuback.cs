@@ -12,13 +12,13 @@ and the Eclipse Distribution License is available at
 
 Contributors:
    Paolo Patierno - initial API and implementation and/or initial documentation
+   David Kristensen - optimalization for the azure platform
 */
 
-using System;
-using uPLibrary.Networking.M2Mqtt.Exceptions;
-
-namespace uPLibrary.Networking.M2Mqtt.Messages
+namespace GnatMQForAzure.Messages
 {
+    using GnatMQForAzure.Exceptions;
+
     /// <summary>
     /// Class for UNSUBACK message from broker to client
     /// </summary>

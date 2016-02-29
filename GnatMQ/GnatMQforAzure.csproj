@@ -7,8 +7,8 @@
     <ProjectGuid>{4EBFA6E5-0636-496C-8C46-991B05DF7491}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>uPLibrary.Networking.M2Mqtt</RootNamespace>
-    <AssemblyName>GnatMQ.Net</AssemblyName>
+    <RootNamespace>GnatMQForAzure</RootNamespace>
+    <AssemblyName>GnatMQforAzure</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />

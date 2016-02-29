@@ -48,9 +48,9 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\GnatMQ\GnatMQ.Net.csproj">
+    <ProjectReference Include="..\GnatMQ\GnatMQforAzure.csproj">
       <Project>{4ebfa6e5-0636-496c-8c46-991b05df7491}</Project>
-      <Name>GnatMQ.Net</Name>
+      <Name>GnatMQforAzure</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
