@@ -1,12 +1,12 @@
-# GnatMQ
+# GnatMQ for Azure
 
 ![](images/gnat.jpg)
 
-GnatMQ - MQTT Broker for .NET and WinRT
+GnatMQ for Azure - MQTT Broker for Azure
 
 *Project Description*
 
-Project to develop a broker (server) for the MQTT protocol, an M2M Internet-of-Things communication protocol based on .Net Framework. It works on WinRT platforms too (Windows 8.1, Windows Phone 8.1 and Windows 10) and .Net Compact Framework 3.9 (Windows Embedded Compact).
+Project to develop a high performance broker (server) for the MQTT protocol, an M2M Internet-of-Things communication protocol based on .Net Framework to run on Azure Cloud Service (PaaS). 
 
 MQTT, short for Message Queue Telemetry Transport, is a light weight messaging protocol that enables embedded devices with limited resources to perform asynchronous communication on a constrained network.
 
@@ -23,6 +23,7 @@ For more information about MQTT, visit: http://www.mqtt.org
 For more information about OASIS, visit: https://www.oasis-open.org
 
 There is an MQTT client, M2Mqtt released as community resource on this GitHub repo : https://github.com/ppatierno/m2mqtt
+This project is based on the GnatMQ released here: https://github.com/ppatierno/m2mqtt
 
 *Main features included in the current release :*
 
@@ -31,9 +32,8 @@ There is an MQTT client, M2Mqtt released as community resource on this GitHub re
 * Retained messages;
 * Will message (QoS, topic and message);
 * Username/Password via a User Access Control;
-* Subscription to topics with wildcards;
+* Subscription to topics with wildcards; 
 * Publish and subscribe handle using inflight queue;
-* Security connection with SSL/TLS;
 
 Features not included in the current release :
 
