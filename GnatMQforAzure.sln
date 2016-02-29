@@ -1,0 +1,46 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 14
+VisualStudioVersion = 14.0.23107.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GnatMQ.Net", "GnatMQ\GnatMQ.Net.csproj", "{4EBFA6E5-0636-496C-8C46-991B05DF7491}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GnatMQServer", "GnatMQServer\GnatMQServer.csproj", "{5686C13D-3429-42AF-B4EE-34BAA6A9DB7D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Debug|ARM = Debug|ARM
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|Any CPU = Release|Any CPU
+		Release|ARM = Release|ARM
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{4EBFA6E5-0636-496C-8C46-991B05DF7491}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4EBFA6E5-0636-496C-8C46-991B05DF7491}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4EBFA6E5-0636-496C-8C46-991B05DF7491}.Debug|ARM.ActiveCfg = Debug|Any CPU
+		{4EBFA6E5-0636-496C-8C46-991B05DF7491}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{4EBFA6E5-0636-496C-8C46-991B05DF7491}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{4EBFA6E5-0636-496C-8C46-991B05DF7491}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4EBFA6E5-0636-496C-8C46-991B05DF7491}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4EBFA6E5-0636-496C-8C46-991B05DF7491}.Release|ARM.ActiveCfg = Release|Any CPU
+		{4EBFA6E5-0636-496C-8C46-991B05DF7491}.Release|x64.ActiveCfg = Release|Any CPU
+		{4EBFA6E5-0636-496C-8C46-991B05DF7491}.Release|x86.ActiveCfg = Release|Any CPU
+		{5686C13D-3429-42AF-B4EE-34BAA6A9DB7D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5686C13D-3429-42AF-B4EE-34BAA6A9DB7D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5686C13D-3429-42AF-B4EE-34BAA6A9DB7D}.Debug|ARM.ActiveCfg = Debug|Any CPU
+		{5686C13D-3429-42AF-B4EE-34BAA6A9DB7D}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{5686C13D-3429-42AF-B4EE-34BAA6A9DB7D}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{5686C13D-3429-42AF-B4EE-34BAA6A9DB7D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5686C13D-3429-42AF-B4EE-34BAA6A9DB7D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5686C13D-3429-42AF-B4EE-34BAA6A9DB7D}.Release|ARM.ActiveCfg = Release|Any CPU
+		{5686C13D-3429-42AF-B4EE-34BAA6A9DB7D}.Release|x64.ActiveCfg = Release|Any CPU
+		{5686C13D-3429-42AF-B4EE-34BAA6A9DB7D}.Release|x86.ActiveCfg = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
