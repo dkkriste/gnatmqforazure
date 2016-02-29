@@ -28,7 +28,6 @@ namespace GnatMQForAzure.Net
     using System.Net;
     using System.Net.Security;
     using System.Net.Sockets;
-    using System.Security.Authentication;
     using System.Security.Cryptography.X509Certificates;
 
     /// <summary>
@@ -400,70 +399,5 @@ namespace GnatMQForAzure.Net
             return;
 #endif
         }
-    }
-
-    /// <summary>
-    /// IPAddress Utility class
-    /// </summary>
-    public static class IPAddressUtility
-    {
-        /// <summary>
-        /// Return AddressFamily for the IP address
-        /// </summary>
-        /// <param name="ipAddress">IP address to check</param>
-        /// <returns>Address family</returns>
-        public static AddressFamily GetAddressFamily(this IPAddress ipAddress)
-        {
-#if (!MF_FRAMEWORK_VERSION_V4_2 && !MF_FRAMEWORK_VERSION_V4_3)
-            return ipAddress.AddressFamily;
-#else
-            return (ipAddress.ToString().IndexOf(':') != -1) ? 
-                AddressFamily.InterNetworkV6 : AddressFamily.InterNetwork;
-#endif
-        }
-    }
-
-    /// <summary>
-    /// MQTT SSL utility class
-    /// </summary>
-    public static class MqttSslUtility
-    {
-#if (!MF_FRAMEWORK_VERSION_V4_2 && !MF_FRAMEWORK_VERSION_V4_3 && !COMPACT_FRAMEWORK)
-        public static SslProtocols ToSslPlatformEnum(MqttSslProtocols mqttSslProtocol)
-        {
-            switch (mqttSslProtocol)
-            {
-                case MqttSslProtocols.None:
-                    return SslProtocols.None;
-                case MqttSslProtocols.SSLv3:
-                    return SslProtocols.Ssl3;
-                case MqttSslProtocols.TLSv1_0:
-                    return SslProtocols.Tls;
-                case MqttSslProtocols.TLSv1_1:
-                    return SslProtocols.Tls11;
-                case MqttSslProtocols.TLSv1_2:
-                    return SslProtocols.Tls12;
-                default:
-                    throw new ArgumentException("SSL/TLS protocol version not supported");
-            }
-        }
-#elif (MF_FRAMEWORK_VERSION_V4_2 || MF_FRAMEWORK_VERSION_V4_3)
-        public static SslProtocols ToSslPlatformEnum(MqttSslProtocols mqttSslProtocol)
-        {
-            switch (mqttSslProtocol)
-            {
-                case MqttSslProtocols.None:
-                    return SslProtocols.None;
-                case MqttSslProtocols.SSLv3:
-                    return SslProtocols.SSLv3;
-                case MqttSslProtocols.TLSv1_0:
-                    return SslProtocols.TLSv1;
-                case MqttSslProtocols.TLSv1_1:
-                case MqttSslProtocols.TLSv1_2:
-                default:
-                    throw new ArgumentException("SSL/TLS protocol version not supported");
-            }
-        }
-#endif
     }
 }

@@ -42,6 +42,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Communication\MqttClientConnectedEventHandler.cs" />
+    <Compile Include="Exceptions\MqttClientErrorCode.cs" />
     <Compile Include="Exceptions\MqttClientException.cs" />
     <Compile Include="Exceptions\MqttCommunicationException.cs" />
     <Compile Include="Exceptions\MqttConnectionException.cs" />
@@ -51,7 +53,11 @@
     <Compile Include="Internal\InternalEvent.cs" />
     <Compile Include="Internal\MsgInternalEvent.cs" />
     <Compile Include="Internal\MsgPublishedInternalEvent.cs" />
+    <Compile Include="Managers\MqttSubscription.cs" />
     <Compile Include="Managers\MqttSubscriptionComparer.cs" />
+    <Compile Include="Managers\MqttUserAuthenticationDelegate.cs" />
+    <Compile Include="Messages\MqttMsgFlow.cs" />
+    <Compile Include="Messages\MqttMsgState.cs" />
     <Compile Include="Messages\MqttMsgUnsubscribeEventArgs.cs" />
     <Compile Include="Messages\MqttMsgSubscribeEventArgs.cs" />
     <Compile Include="Messages\MqttMsgConnectEventArgs.cs" />
@@ -78,7 +84,10 @@
     <Compile Include="MqttClientCollection.cs" />
     <Compile Include="Communication\MqttClientConnectedEventArgs.cs" />
     <Compile Include="MqttClient.cs" />
-    <Compile Include="MqttSecurity.cs" />
+    <Compile Include="MqttProtocolVersion.cs" />
+    <Compile Include="MqttSslProtocols.cs" />
+    <Compile Include="Net\IPAddressUtility.cs" />
+    <Compile Include="Net\MqttSslUtility.cs" />
     <Compile Include="Net\MqttTcpCommunicationLayer.cs" />
     <Compile Include="MqttBroker.cs" />
     <Compile Include="Managers\MqttPublisherManager.cs" />

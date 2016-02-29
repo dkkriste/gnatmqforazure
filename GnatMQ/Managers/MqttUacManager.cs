@@ -18,14 +18,6 @@ Contributors:
 namespace GnatMQForAzure.Managers
 {
     /// <summary>
-    /// Delegate for executing user authentication
-    /// </summary>
-    /// <param name="username">Username</param>
-    /// <param name="password">Password</param>
-    /// <returns></returns>
-    public delegate bool MqttUserAuthenticationDelegate(string username, string password);
-
-    /// <summary>
     /// Manager for User Access Control
     /// </summary>
     public class MqttUacManager
