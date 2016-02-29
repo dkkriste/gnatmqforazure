@@ -110,17 +110,5 @@ namespace GnatMQForAzure.Messages
 
             return msg;
         }
-
-        public override string ToString()
-        {
-#if TRACE
-            return this.GetTraceString(
-                "PUBCOMP",
-                new object[] { "messageId" },
-                new object[] { this.messageId });
-#else
-            return base.ToString();
-#endif
-        }
     }
 }

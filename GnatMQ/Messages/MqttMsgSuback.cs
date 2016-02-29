@@ -146,17 +146,5 @@ namespace GnatMQForAzure.Messages
 
             return buffer;
         }
-
-        public override string ToString()
-        {
-#if TRACE
-            return this.GetTraceString(
-                "SUBACK",
-                new object[] { "messageId", "grantedQosLevels" },
-                new object[] { this.messageId, this.grantedQosLevels });
-#else
-            return base.ToString();
-#endif
-        }
     }
 }

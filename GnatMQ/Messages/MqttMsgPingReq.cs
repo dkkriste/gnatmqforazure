@@ -71,17 +71,5 @@ namespace GnatMQForAzure.Messages
 
             return msg;
         }
-
-        public override string ToString()
-        {
-#if TRACE
-            return this.GetTraceString(
-                "PINGREQ",
-                null,
-                null);
-#else
-            return base.ToString();
-#endif
-        }
     }
 }

@@ -568,17 +568,5 @@ namespace GnatMQForAzure.Messages
 
             return buffer;
         }
-
-        public override string ToString()
-        {
-#if TRACE
-            return this.GetTraceString(
-                "CONNECT",
-                new object[] { "protocolName", "protocolVersion", "clientId", "willFlag", "willRetain", "willQosLevel", "willTopic", "willMessage", "username", "password", "cleanSession", "keepAlivePeriod" },
-                new object[] { this.protocolName, this.protocolVersion, this.clientId, this.willFlag, this.willRetain, this.willQosLevel, this.willTopic, this.willMessage, this.username, this.password, this.cleanSession, this.keepAlivePeriod });
-#else
-            return base.ToString();
-#endif
-        }
     }
 }

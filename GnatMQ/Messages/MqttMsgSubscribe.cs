@@ -15,10 +15,6 @@ Contributors:
    David Kristensen - optimalization for the azure platform
 */
 
-// if NOT .Net Micro Framework
-#if (!MF_FRAMEWORK_VERSION_V4_2 && !MF_FRAMEWORK_VERSION_V4_3)
-#endif
-
 namespace GnatMQForAzure.Messages
 {
     using System;
@@ -131,15 +127,8 @@ namespace GnatMQForAzure.Messages
             // payload contains topics and QoS levels
             // NOTE : before, I don't know how many topics will be in the payload (so use List)
 
-// if .Net Micro Framework
-#if (MF_FRAMEWORK_VERSION_V4_2 || MF_FRAMEWORK_VERSION_V4_3)
-            IList tmpTopics = new ArrayList();
-            IList tmpQosLevels = new ArrayList();
-// else other frameworks (.Net, .Net Compact, Mono, Windows Phone) 
-#else
             IList<String> tmpTopics = new List<String>();
             IList<byte> tmpQosLevels = new List<byte>();
-#endif
             do
             {
                 // topic name
@@ -257,18 +246,6 @@ namespace GnatMQForAzure.Messages
             }
             
             return buffer;
-        }
-
-        public override string ToString()
-        {
-#if TRACE
-            return this.GetTraceString(
-                "SUBSCRIBE",
-                new object[] { "messageId", "topics", "qosLevels" },
-                new object[] { this.messageId, this.topics, this.qosLevels });
-#else
-            return base.ToString();
-#endif
         }
     }
 }

@@ -15,14 +15,6 @@ Contributors:
    David Kristensen - optimalization for the azure platform
 */
 
-#if SSL
-#if !(WINDOWS_APP || WINDOWS_PHONE_APP)
-
-#elif (MF_FRAMEWORK_VERSION_V4_2 || MF_FRAMEWORK_VERSION_V4_3)
-using Microsoft.SPOT.Net.Security;
-#endif
-#endif
-
 namespace GnatMQForAzure
 {
     using System;
@@ -82,7 +74,6 @@ namespace GnatMQForAzure
         {
         }
 
-#if !(WINDOWS_APP || WINDOWS_PHONE_APP || MF_FRAMEWORK_VERSION_V4_2 || MF_FRAMEWORK_VERSION_V4_3 || COMPACT_FRAMEWORK)
         /// <summary>
         /// Constructor (TCP/IP communication layer on port 8883 with SSL/TLS and default settings)
         /// </summary>
@@ -92,9 +83,7 @@ namespace GnatMQForAzure
             : this(new MqttTcpCommunicationLayer(MqttSettings.MQTT_BROKER_DEFAULT_SSL_PORT, true, serverCert, sslProtocol, null, null), MqttSettings.Instance)
         {
         }
-#endif
 
-#if !(WINDOWS_APP || WINDOWS_PHONE_APP || MF_FRAMEWORK_VERSION_V4_2 || MF_FRAMEWORK_VERSION_V4_3 || COMPACT_FRAMEWORK)
         /// <summary>
         /// Constructor (TCP/IP communication layer on port 8883 with SSL/TLS and default settings)
         /// </summary>
@@ -108,7 +97,6 @@ namespace GnatMQForAzure
             : this(new MqttTcpCommunicationLayer(MqttSettings.MQTT_BROKER_DEFAULT_SSL_PORT, true, serverCert, sslProtocol, userCertificateValidationCallback, userCertificateSelectionCallback), MqttSettings.Instance)
         {
         }
-#endif
 
         /// <summary>
         /// Constructor

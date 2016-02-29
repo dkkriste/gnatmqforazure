@@ -263,17 +263,5 @@ namespace GnatMQForAzure.Messages
 
             return msg;
         }
-
-        public override string ToString()
-        {
-#if TRACE
-            return this.GetTraceString(
-                "PUBLISH",
-                new object[] { "messageId", "topic", "message" },
-                new object[] { this.messageId, this.topic, this.message });
-#else
-            return base.ToString();
-#endif
-        }
     }
 }

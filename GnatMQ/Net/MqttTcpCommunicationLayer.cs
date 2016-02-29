@@ -15,13 +15,6 @@ Contributors:
    David Kristensen - optimalization for the azure platform
 */
 
-#if SSL
-#if (MF_FRAMEWORK_VERSION_V4_2 || MF_FRAMEWORK_VERSION_V4_3)
-using Microsoft.SPOT.Net.Security;
-#else
-#endif
-#endif
-
 namespace GnatMQForAzure.Net
 {
     using System;
@@ -69,7 +62,6 @@ namespace GnatMQForAzure.Net
         /// </summary>
         public MqttSslProtocols Protocol { get; private set; }
 
-#if !(MF_FRAMEWORK_VERSION_V4_2 || MF_FRAMEWORK_VERSION_V4_3 || COMPACT_FRAMEWORK)
         /// <summary>
         /// A RemoteCertificateValidationCallback delegate responsible for validating the certificate supplied by the remote party
         /// </summary>
@@ -79,7 +71,6 @@ namespace GnatMQForAzure.Net
         /// A LocalCertificateSelectionCallback delegate responsible for selecting the certificate used for authentication
         /// </summary>
         public LocalCertificateSelectionCallback UserCertificateSelectionCallback { get; private set; }
-#endif
 
         #endregion
 
@@ -95,11 +86,7 @@ namespace GnatMQForAzure.Net
         /// </summary>
         /// <param name="port">TCP listening port</param>
         public MqttTcpCommunicationLayer(int port)
-#if !(MF_FRAMEWORK_VERSION_V4_2 || MF_FRAMEWORK_VERSION_V4_3 || COMPACT_FRAMEWORK)
             : this(port, false, null, MqttSslProtocols.None, null, null)
-#else
-            : this(port, false, null, MqttSslProtocols.None)
-#endif
         {
 
         }
@@ -111,15 +98,11 @@ namespace GnatMQForAzure.Net
         /// <param name="secure">Secure connection (SSL/TLS)</param>
         /// <param name="serverCert">X509 server certificate</param>
         /// <param name="protocol">SSL/TLS protocol version</param>
-#if !(MF_FRAMEWORK_VERSION_V4_2 || MF_FRAMEWORK_VERSION_V4_3 || COMPACT_FRAMEWORK)
         /// <param name="userCertificateSelectionCallback">A RemoteCertificateValidationCallback delegate responsible for validating the certificate supplied by the remote party</param>
         /// <param name="userCertificateValidationCallback">A LocalCertificateSelectionCallback delegate responsible for selecting the certificate used for authentication</param>
         public MqttTcpCommunicationLayer(int port, bool secure, X509Certificate serverCert, MqttSslProtocols protocol,
             RemoteCertificateValidationCallback userCertificateValidationCallback,
             LocalCertificateSelectionCallback userCertificateSelectionCallback)
-#else
-        public MqttTcpCommunicationLayer(int port, bool secure, X509Certificate serverCert, MqttSslProtocols protocol)
-#endif
         {
             if (secure && serverCert == null)
                 throw new ArgumentException("Secure connection requested but no server certificate provided");
@@ -128,10 +111,8 @@ namespace GnatMQForAzure.Net
             this.Secure = secure;
             this.ServerCert = serverCert;
             this.Protocol = protocol;
-#if !(MF_FRAMEWORK_VERSION_V4_2 || MF_FRAMEWORK_VERSION_V4_3 || COMPACT_FRAMEWORK)
             this.UserCertificateValidationCallback = userCertificateValidationCallback;
             this.UserCertificateSelectionCallback = userCertificateSelectionCallback;
-#endif
         }
 
 #region IMqttCommunicationLayer ...
@@ -191,22 +172,16 @@ namespace GnatMQForAzure.Net
                     {
                         // create network channel to accept connection request
                         IMqttNetworkChannel channel = null;
-#if SSL
                         if (this.Secure)
                         {
-#if !(MF_FRAMEWORK_VERSION_V4_2 || MF_FRAMEWORK_VERSION_V4_3 || COMPACT_FRAMEWORK)
                             channel = new MqttNetworkChannel(socketClient, this.Secure, this.ServerCert, this.Protocol, this.UserCertificateValidationCallback, this.UserCertificateSelectionCallback);
-#else
-                            channel = new MqttNetworkChannel(socketClient, this.Secure, this.ServerCert, this.Protocol);
-#endif
+
                         }
                         else
                         {
                             channel = new MqttNetworkChannel(socketClient);
                         }
-#else
-                        channel = new MqttNetworkChannel(socketClient);
-#endif
+
                         channel.Accept();
 
                         // handling channel for connected client

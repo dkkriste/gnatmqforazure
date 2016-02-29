@@ -15,7 +15,6 @@ Contributors:
    David Kristensen - optimalization for the azure platform
 */
 
-#if BROKER
 namespace GnatMQForAzure.Session
 {
     using System.Collections.Generic;
@@ -63,4 +62,3 @@ namespace GnatMQForAzure.Session
         }
     }
 }
-#endif

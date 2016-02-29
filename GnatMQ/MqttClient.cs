@@ -15,24 +15,6 @@ Contributors:
    David Kristensen - optimalization for the azure platform
 */
 
-#if !(WINDOWS_APP || WINDOWS_PHONE_APP)
-#endif
-// if .Net Micro Framework
-#if (MF_FRAMEWORK_VERSION_V4_2 || MF_FRAMEWORK_VERSION_V4_3)
-using Microsoft.SPOT;
-#if SSL
-using Microsoft.SPOT.Net.Security;
-#endif
-// else other frameworks (.Net, .Net Compact, Mono, Windows Phone) 
-#else
-#if (SSL && !(WINDOWS_APP || WINDOWS_PHONE_APP))
-#endif
-#endif
-
-#if (WINDOWS_APP || WINDOWS_PHONE_APP)
-using Windows.Networking.Sockets;
-#endif
-
 // alias needed due to Microsoft.SPOT.Trace in .Net Micro Framework
 // (it's ambiguos with uPLibrary.Networking.M2Mqtt.Utility.Trace)
 
@@ -59,7 +41,6 @@ namespace GnatMQForAzure
     /// </summary>
     public class MqttClient
     {
-#if BROKER
         #region Constants ...
 
         // thread names
@@ -69,7 +50,6 @@ namespace GnatMQForAzure
         private const string KEEP_ALIVE_THREAD = "KeepAliveThread";
 
         #endregion
-#endif
 
         /// <summary>
         /// Delagate that defines event handler for PUBLISH message received
@@ -91,7 +71,6 @@ namespace GnatMQForAzure
         /// </summary>
         public delegate void MqttMsgUnsubscribedEventHandler(object sender, MqttMsgUnsubscribedEventArgs e);
 
-#if BROKER
         /// <summary>
         /// Delagate that defines event handler for SUBSCRIBE message received
         /// </summary>
@@ -111,7 +90,6 @@ namespace GnatMQForAzure
         /// Delegate that defines event handler for client disconnection (DISCONNECT message or not)
         /// </summary>
         public delegate void MqttMsgDisconnectEventHandler(object sender, EventArgs e);
-#endif
 
         /// <summary>
         /// Delegate that defines event handler for cliet/peer disconnection
@@ -154,7 +132,6 @@ namespace GnatMQForAzure
         public event MqttMsgSubscribedEventHandler MqttMsgSubscribed;
         // event for unsubscribed topic
         public event MqttMsgUnsubscribedEventHandler MqttMsgUnsubscribed;
-#if BROKER
         // event for SUBSCRIBE message received
         public event MqttMsgSubscribeEventHandler MqttMsgSubscribeReceived;
         // event for USUBSCRIBE message received
@@ -163,7 +140,6 @@ namespace GnatMQForAzure
         public event MqttMsgConnectEventHandler MqttMsgConnected;
         // event for DISCONNECT message received
         public event MqttMsgDisconnectEventHandler MqttMsgDisconnected;
-#endif
 
         // event for peer/client disconnection
         public event ConnectionClosedEventHandler ConnectionClosed;
@@ -229,7 +205,6 @@ namespace GnatMQForAzure
         /// </summary>
         public MqttProtocolVersion ProtocolVersion { get; set; }
 
-#if BROKER
         /// <summary>
         /// MQTT Client Session
         /// </summary>
@@ -238,7 +213,6 @@ namespace GnatMQForAzure
             get { return this.session; }
             set { this.session = value; }
         }
-#endif
 
         /// <summary>
         /// MQTT client settings
@@ -248,7 +222,6 @@ namespace GnatMQForAzure
             get { return this.settings; }
         }
 
-#if !(WINDOWS_APP || WINDOWS_PHONE_APP) 
         /// <summary>
         /// Constructor
         /// </summary>
@@ -271,24 +244,15 @@ namespace GnatMQForAzure
         [Obsolete("Use this ctor MqttClient(string brokerHostName, int brokerPort, bool secure, X509Certificate caCert) insted")]
         public MqttClient(IPAddress brokerIpAddress, int brokerPort, bool secure, X509Certificate caCert, X509Certificate clientCert, MqttSslProtocols sslProtocol)
         {
-#if !(MF_FRAMEWORK_VERSION_V4_2 || MF_FRAMEWORK_VERSION_V4_3 || COMPACT_FRAMEWORK)
             this.Init(brokerIpAddress.ToString(), brokerPort, secure, caCert, clientCert, sslProtocol, null, null);
-#else
-            this.Init(brokerIpAddress.ToString(), brokerPort, secure, caCert, clientCert, sslProtocol);
-#endif
         }
-#endif
 
         /// <summary>
         /// Constructor
         /// </summary>
         /// <param name="brokerHostName">Broker Host Name or IP Address</param>
         public MqttClient(string brokerHostName) :
-#if !(WINDOWS_APP || WINDOWS_PHONE_APP)
             this(brokerHostName, MqttSettings.MQTT_BROKER_DEFAULT_PORT, false, null, null, MqttSslProtocols.None)
-#else
-            this(brokerHostName, MqttSettings.MQTT_BROKER_DEFAULT_PORT, false, MqttSslProtocols.None)
-#endif
         {
         }
 
@@ -299,25 +263,13 @@ namespace GnatMQForAzure
         /// <param name="brokerPort">Broker port</param>
         /// <param name="secure">Using secure connection</param>
         /// <param name="sslProtocol">SSL/TLS protocol version</param>
-#if !(WINDOWS_APP || WINDOWS_PHONE_APP)
         /// <param name="caCert">CA certificate for secure connection</param>
         /// <param name="clientCert">Client certificate</param>
         public MqttClient(string brokerHostName, int brokerPort, bool secure, X509Certificate caCert, X509Certificate clientCert, MqttSslProtocols sslProtocol)            
-#else
-        public MqttClient(string brokerHostName, int brokerPort, bool secure, MqttSslProtocols sslProtocol)            
-#endif
         {
-#if !(MF_FRAMEWORK_VERSION_V4_2 || MF_FRAMEWORK_VERSION_V4_3 || COMPACT_FRAMEWORK || WINDOWS_APP || WINDOWS_PHONE_APP)
             this.Init(brokerHostName, brokerPort, secure, caCert, clientCert, sslProtocol, null, null);
-#elif (WINDOWS_APP || WINDOWS_PHONE_APP)
-            this.Init(brokerHostName, brokerPort, secure, sslProtocol);
-#else
-            this.Init(brokerHostName, brokerPort, secure, caCert, clientCert, sslProtocol);
-#endif
         }
 
-
-#if !(MF_FRAMEWORK_VERSION_V4_2 || MF_FRAMEWORK_VERSION_V4_3 || COMPACT_FRAMEWORK || WINDOWS_APP || WINDOWS_PHONE_APP)
 
         /// <summary>
         /// Constructor
@@ -368,9 +320,7 @@ namespace GnatMQForAzure
         {
             this.Init(brokerHostName, brokerPort, secure, caCert, clientCert, sslProtocol, userCertificateValidationCallback, userCertificateSelectionCallback);
         }
-#endif
 
-#if BROKER
         /// <summary>
         /// Constructor
         /// </summary>
@@ -404,7 +354,6 @@ namespace GnatMQForAzure
             // session
             this.session = null;
         }
-#endif
 
         /// <summary>
         /// MqttClient initialization
@@ -415,25 +364,14 @@ namespace GnatMQForAzure
         /// <param name="caCert">CA certificate for secure connection</param>
         /// <param name="clientCert">Client certificate</param>
         /// <param name="sslProtocol">SSL/TLS protocol version</param>
-#if !(MF_FRAMEWORK_VERSION_V4_2 || MF_FRAMEWORK_VERSION_V4_3 || COMPACT_FRAMEWORK || WINDOWS_APP || WINDOWS_PHONE_APP)
         /// <param name="userCertificateSelectionCallback">A RemoteCertificateValidationCallback delegate responsible for validating the certificate supplied by the remote party</param>
         /// <param name="userCertificateValidationCallback">A LocalCertificateSelectionCallback delegate responsible for selecting the certificate used for authentication</param>
         private void Init(string brokerHostName, int brokerPort, bool secure, X509Certificate caCert, X509Certificate clientCert, MqttSslProtocols sslProtocol,
             RemoteCertificateValidationCallback userCertificateValidationCallback,
             LocalCertificateSelectionCallback userCertificateSelectionCallback)
-#elif (WINDOWS_APP || WINDOWS_PHONE_APP)
-        private void Init(string brokerHostName, int brokerPort, bool secure, MqttSslProtocols sslProtocol)
-#else
-        private void Init(string brokerHostName, int brokerPort, bool secure, X509Certificate caCert, X509Certificate clientCert, MqttSslProtocols sslProtocol)
-#endif
         {
             // set default MQTT protocol version (default is 3.1.1)
             this.ProtocolVersion = MqttProtocolVersion.Version_3_1_1;
-#if !SSL
-            // check security parameters
-            if (secure)
-                throw new ArgumentException("Library compiled without SSL support");
-#endif
 
             this.brokerHostName = brokerHostName;
             this.brokerPort = brokerPort;
@@ -462,13 +400,7 @@ namespace GnatMQForAzure
             this.session = null;
 
             // create network channel
-#if !(MF_FRAMEWORK_VERSION_V4_2 || MF_FRAMEWORK_VERSION_V4_3 || COMPACT_FRAMEWORK || WINDOWS_APP || WINDOWS_PHONE_APP)
             this.channel = new MqttNetworkChannel(this.brokerHostName, this.brokerPort, secure, caCert, clientCert, sslProtocol, userCertificateValidationCallback, userCertificateSelectionCallback);
-#elif (WINDOWS_APP || WINDOWS_PHONE_APP)
-            this.channel = new MqttNetworkChannel(this.brokerHostName, this.brokerPort, secure, sslProtocol);
-#else
-            this.channel = new MqttNetworkChannel(this.brokerHostName, this.brokerPort, secure, caCert, clientCert, sslProtocol);
-#endif
         }
 
         /// <summary>
@@ -614,7 +546,6 @@ namespace GnatMQForAzure
             this.OnConnectionClosing();
         }
 
-#if BROKER
         /// <summary>
         /// Open client communication
         /// </summary>
@@ -631,16 +562,11 @@ namespace GnatMQForAzure
             // start thread for handling inflight messages queue to client asynchronously (publish and acknowledge)
             Fx.StartThread(this.ProcessInflightThread);   
         }
-#endif
 
         /// <summary>
         /// Close client
         /// </summary>
-#if BROKER
         public void Close()
-#else
-        private void Close()
-#endif
         {
             // stop receiving thread
             this.isRunning = false;
@@ -653,16 +579,8 @@ namespace GnatMQForAzure
             if (this.inflightWaitHandle != null)
                 this.inflightWaitHandle.Set();
 
-#if BROKER
             // unlock keep alive thread
             this.keepAliveEvent.Set();
-#else
-            // unlock keep alive thread and wait
-            this.keepAliveEvent.Set();
-
-            if (this.keepAliveEventEnd != null)
-                this.keepAliveEventEnd.WaitOne();
-#endif
 
             // clear all queues
             this.inflightQueue.Clear();
@@ -689,17 +607,12 @@ namespace GnatMQForAzure
             }
             catch (Exception e)
             {
-#if TRACE
-                Trace.WriteLine(TraceLevel.Error, "Exception occurred: {0}", e.ToString());
-#endif
-
                 // client must close connection
                 this.OnConnectionClosing();
                 return null;
             }
         }
 
-#if BROKER
         /// <summary>
         /// Send CONNACK message to the client (connection accepted or not)
         /// </summary>
@@ -774,7 +687,6 @@ namespace GnatMQForAzure
 
             this.Send(unsuback);
         }
-#endif
 
         /// <summary>
         /// Subscribe for message topics
@@ -926,7 +838,6 @@ namespace GnatMQForAzure
             }
         }
 
-#if BROKER
         /// <summary>
         /// Wrapper method for raising SUBSCRIBE message event
         /// </summary>
@@ -978,7 +889,6 @@ namespace GnatMQForAzure
                 this.MqttMsgDisconnected(this, EventArgs.Empty);
             }
         }
-#endif
 
         /// <summary>
         /// Wrapper method for peer/client disconnection
@@ -1001,18 +911,9 @@ namespace GnatMQForAzure
             {
                 // send message
                 this.channel.Send(msgBytes);
-
-#if !BROKER
-                // update last message sent ticks
-                this.lastCommTime = Environment.TickCount;
-#endif
             }
             catch (Exception e)
             {
-#if TRACE
-                Trace.WriteLine(TraceLevel.Error, "Exception occurred: {0}", e.ToString());
-#endif
-
                 throw new MqttCommunicationException(e);
             }
         }
@@ -1023,9 +924,6 @@ namespace GnatMQForAzure
         /// <param name="msg">Message</param>
         private void Send(MqttMsgBase msg)
         {
-#if TRACE
-            Trace.WriteLine(TraceLevel.Frame, "SEND {0}", msg);
-#endif
             this.Send(msg.GetBytes((byte)this.ProtocolVersion));
         }
 
@@ -1059,28 +957,17 @@ namespace GnatMQForAzure
             }
             catch (Exception e)
             {
-#if !(MF_FRAMEWORK_VERSION_V4_2 || MF_FRAMEWORK_VERSION_V4_3 || COMPACT_FRAMEWORK || WINDOWS_APP || WINDOWS_PHONE_APP)
                 if (typeof(SocketException) == e.GetType())
                 {
                     // connection reset by broker
                     if (((SocketException)e).SocketErrorCode == SocketError.ConnectionReset)
                         this.IsConnected = false;
                 }
-#endif
-#if TRACE
-                Trace.WriteLine(TraceLevel.Error, "Exception occurred: {0}", e.ToString());
-#endif
-
                 throw new MqttCommunicationException(e);
             }
 
-#if (MF_FRAMEWORK_VERSION_V4_2 || MF_FRAMEWORK_VERSION_V4_3 || COMPACT_FRAMEWORK)
-            // wait for answer from broker
-            if (this.syncEndReceiving.WaitOne(timeout, false))
-#else
             // wait for answer from broker
             if (this.syncEndReceiving.WaitOne(timeout))
-#endif
             {
                 // message received without exception
                 if (this.exReceiving == null)
@@ -1114,9 +1001,6 @@ namespace GnatMQForAzure
         /// <returns>MQTT message response</returns>
         private MqttMsgBase SendReceive(MqttMsgBase msg, int timeout)
         {
-#if TRACE
-            Trace.WriteLine(TraceLevel.Frame, "SEND {0}", msg);
-#endif
             return this.SendReceive(msg.GetBytes((byte)this.ProtocolVersion), timeout);
         }
 
@@ -1208,10 +1092,6 @@ namespace GnatMQForAzure
                     {
                         // enqueue message and unlock send thread
                         this.inflightQueue.Enqueue(msgContext);
-
-#if TRACE
-                        Trace.WriteLine(TraceLevel.Queuing, "enqueued {0}", msg);
-#endif
 
                         // PUBLISH message
                         if (msg.Type == MqttMsgBase.MQTT_MSG_PUBLISH_TYPE)
@@ -1325,9 +1205,6 @@ namespace GnatMQForAzure
                 lock (this.internalQueue)
                 {
                     this.internalQueue.Enqueue(msg);
-#if TRACE
-                    Trace.WriteLine(TraceLevel.Queuing, "enqueued {0}", msg);
-#endif
                     this.inflightWaitHandle.Set();
                 }
             }
@@ -1351,10 +1228,8 @@ namespace GnatMQForAzure
 
                     if (readBytes > 0)
                     {
-#if BROKER
                         // update last message received ticks
                         this.lastCommTime = Environment.TickCount;
-#endif
 
                         // extract message type from received byte
                         msgType = (byte)((fixedHeaderFirstByte[0] & MqttMsgBase.MSG_TYPE_MASK) >> MqttMsgBase.MSG_TYPE_OFFSET);
@@ -1364,106 +1239,55 @@ namespace GnatMQForAzure
                             // CONNECT message received
                             case MqttMsgBase.MQTT_MSG_CONNECT_TYPE:
 
-#if BROKER
                                 MqttMsgConnect connect = MqttMsgConnect.Parse(fixedHeaderFirstByte[0], (byte)this.ProtocolVersion, this.channel);
-#if TRACE
-                                Trace.WriteLine(TraceLevel.Frame, "RECV {0}", connect);
-#endif
-
                                 // raise message received event
                                 this.OnInternalEvent(new MsgInternalEvent(connect));
                                 break;
-#else
-                                throw new MqttClientException(MqttClientErrorCode.WrongBrokerMessage);
-#endif
                                 
                             // CONNACK message received
                             case MqttMsgBase.MQTT_MSG_CONNACK_TYPE:
-
-#if BROKER
                                 throw new MqttClientException(MqttClientErrorCode.WrongBrokerMessage);
-#else
-                                this.msgReceived = MqttMsgConnack.Parse(fixedHeaderFirstByte[0], (byte)this.ProtocolVersion, this.channel);
-#if TRACE
-                                MqttUtility.Trace.WriteLine(TraceLevel.Frame, "RECV {0}", this.msgReceived);
-#endif
-                                this.syncEndReceiving.Set();
-                                break;
-#endif
 
                             // PINGREQ message received
                             case MqttMsgBase.MQTT_MSG_PINGREQ_TYPE:
 
-#if BROKER
                                 this.msgReceived = MqttMsgPingReq.Parse(fixedHeaderFirstByte[0], (byte)this.ProtocolVersion, this.channel);
-#if TRACE
-                                Trace.WriteLine(TraceLevel.Frame, "RECV {0}", this.msgReceived);
-#endif
 
                                 MqttMsgPingResp pingresp = new MqttMsgPingResp();
                                 this.Send(pingresp);
 
                                 break;
-#else
-                                throw new MqttClientException(MqttClientErrorCode.WrongBrokerMessage);
-#endif
+
 
                             // PINGRESP message received
                             case MqttMsgBase.MQTT_MSG_PINGRESP_TYPE:
 
-#if BROKER
                                 throw new MqttClientException(MqttClientErrorCode.WrongBrokerMessage);
-#else
-                                this.msgReceived = MqttMsgPingResp.Parse(fixedHeaderFirstByte[0], (byte)this.ProtocolVersion, this.channel);
-#if TRACE
-                                MqttUtility.Trace.WriteLine(TraceLevel.Frame, "RECV {0}", this.msgReceived);
-#endif
-                                this.syncEndReceiving.Set();
-                                break;
-#endif
+
 
                             // SUBSCRIBE message received
                             case MqttMsgBase.MQTT_MSG_SUBSCRIBE_TYPE:
 
-#if BROKER
                                 MqttMsgSubscribe subscribe = MqttMsgSubscribe.Parse(fixedHeaderFirstByte[0], (byte)this.ProtocolVersion, this.channel);
-#if TRACE
-                                Trace.WriteLine(TraceLevel.Frame, "RECV {0}", subscribe);
-#endif
+
 
                                 // raise message received event
                                 this.OnInternalEvent(new MsgInternalEvent(subscribe));
 
                                 break;
-#else
-                                throw new MqttClientException(MqttClientErrorCode.WrongBrokerMessage);
-#endif
+
 
                             // SUBACK message received
                             case MqttMsgBase.MQTT_MSG_SUBACK_TYPE:
 
-#if BROKER
                                 throw new MqttClientException(MqttClientErrorCode.WrongBrokerMessage);
-#else
-                                // enqueue SUBACK message received (for QoS Level 1) into the internal queue
-                                MqttMsgSuback suback = MqttMsgSuback.Parse(fixedHeaderFirstByte[0], (byte)this.ProtocolVersion, this.channel);
-#if TRACE
-                                MqttUtility.Trace.WriteLine(TraceLevel.Frame, "RECV {0}", suback);
-#endif
 
-                                // enqueue SUBACK message into the internal queue
-                                this.EnqueueInternal(suback);
-
-                                break;
-#endif
 
                             // PUBLISH message received
                             case MqttMsgBase.MQTT_MSG_PUBLISH_TYPE:
 
                                 MqttMsgPublish publish = MqttMsgPublish.Parse(fixedHeaderFirstByte[0], (byte)this.ProtocolVersion, this.channel);
-#if TRACE
-                                Trace.WriteLine(TraceLevel.Frame, "RECV {0}", publish);
-#endif
+
 
                                 // enqueue PUBLISH message to acknowledge into the inflight queue
                                 this.EnqueueInflight(publish, MqttMsgFlow.ToAcknowledge);
@@ -1475,10 +1299,6 @@ namespace GnatMQForAzure
 
                                 // enqueue PUBACK message received (for QoS Level 1) into the internal queue
                                 MqttMsgPuback puback = MqttMsgPuback.Parse(fixedHeaderFirstByte[0], (byte)this.ProtocolVersion, this.channel);
-#if TRACE
-                                Trace.WriteLine(TraceLevel.Frame, "RECV {0}", puback);
-#endif
-
                                 // enqueue PUBACK message into the internal queue
                                 this.EnqueueInternal(puback);
 
@@ -1489,10 +1309,6 @@ namespace GnatMQForAzure
 
                                 // enqueue PUBREC message received (for QoS Level 2) into the internal queue
                                 MqttMsgPubrec pubrec = MqttMsgPubrec.Parse(fixedHeaderFirstByte[0], (byte)this.ProtocolVersion, this.channel);
-#if TRACE
-                                Trace.WriteLine(TraceLevel.Frame, "RECV {0}", pubrec);
-#endif
-
                                 // enqueue PUBREC message into the internal queue
                                 this.EnqueueInternal(pubrec);
 
@@ -1503,9 +1319,6 @@ namespace GnatMQForAzure
 
                                 // enqueue PUBREL message received (for QoS Level 2) into the internal queue
                                 MqttMsgPubrel pubrel = MqttMsgPubrel.Parse(fixedHeaderFirstByte[0], (byte)this.ProtocolVersion, this.channel);
-#if TRACE
-                                Trace.WriteLine(TraceLevel.Frame, "RECV {0}", pubrel);
-#endif
 
                                 // enqueue PUBREL message into the internal queue
                                 this.EnqueueInternal(pubrel);
@@ -1517,9 +1330,6 @@ namespace GnatMQForAzure
 
                                 // enqueue PUBCOMP message received (for QoS Level 2) into the internal queue
                                 MqttMsgPubcomp pubcomp = MqttMsgPubcomp.Parse(fixedHeaderFirstByte[0], (byte)this.ProtocolVersion, this.channel);
-#if TRACE
-                                Trace.WriteLine(TraceLevel.Frame, "RECV {0}", pubcomp);
-#endif
 
                                 // enqueue PUBCOMP message into the internal queue
                                 this.EnqueueInternal(pubcomp);
@@ -1529,54 +1339,29 @@ namespace GnatMQForAzure
                             // UNSUBSCRIBE message received
                             case MqttMsgBase.MQTT_MSG_UNSUBSCRIBE_TYPE:
 
-#if BROKER
                                 MqttMsgUnsubscribe unsubscribe = MqttMsgUnsubscribe.Parse(fixedHeaderFirstByte[0], (byte)this.ProtocolVersion, this.channel);
-#if TRACE
-                                Trace.WriteLine(TraceLevel.Frame, "RECV {0}", unsubscribe);
-#endif
 
                                 // raise message received event
                                 this.OnInternalEvent(new MsgInternalEvent(unsubscribe));
 
                                 break;
-#else
-                                throw new MqttClientException(MqttClientErrorCode.WrongBrokerMessage);
-#endif
+
 
                             // UNSUBACK message received
                             case MqttMsgBase.MQTT_MSG_UNSUBACK_TYPE:
-
-#if BROKER
                                 throw new MqttClientException(MqttClientErrorCode.WrongBrokerMessage);
-#else
-                                // enqueue UNSUBACK message received (for QoS Level 1) into the internal queue
-                                MqttMsgUnsuback unsuback = MqttMsgUnsuback.Parse(fixedHeaderFirstByte[0], (byte)this.ProtocolVersion, this.channel);
-#if TRACE
-                                MqttUtility.Trace.WriteLine(TraceLevel.Frame, "RECV {0}", unsuback);
-#endif
 
-                                // enqueue UNSUBACK message into the internal queue
-                                this.EnqueueInternal(unsuback);
-
-                                break;
-#endif
 
                             // DISCONNECT message received
                             case MqttMsgDisconnect.MQTT_MSG_DISCONNECT_TYPE:
 
-#if BROKER
                                 MqttMsgDisconnect disconnect = MqttMsgDisconnect.Parse(fixedHeaderFirstByte[0], (byte)this.ProtocolVersion, this.channel);
-#if TRACE
-                                Trace.WriteLine(TraceLevel.Frame, "RECV {0}", disconnect);
-#endif
+
 
                                 // raise message received event
                                 this.OnInternalEvent(new MsgInternalEvent(disconnect));
 
                                 break;
-#else
-                                throw new MqttClientException(MqttClientErrorCode.WrongBrokerMessage);
-#endif
 
                             default:
 
@@ -1594,9 +1379,6 @@ namespace GnatMQForAzure
                 }
                 catch (Exception e)
                 {
-#if TRACE
-                    Trace.WriteLine(TraceLevel.Error, "Exception occurred: {0}", e.ToString());
-#endif
                     this.exReceiving = new MqttCommunicationException(e);
 
                     bool close = false;
@@ -1608,13 +1390,11 @@ namespace GnatMQForAzure
                                 (ex.ErrorCode == MqttClientErrorCode.InvalidProtocolName) ||
                                 (ex.ErrorCode == MqttClientErrorCode.InvalidConnectFlags));
                     }
-#if !(WINDOWS_APP || WINDOWS_PHONE_APP)
                     else if ((e.GetType() == typeof(IOException)) || (e.GetType() == typeof(SocketException)) ||
                              ((e.InnerException != null) && (e.InnerException.GetType() == typeof(SocketException)))) // added for SSL/TLS incoming connection that use SslStream that wraps SocketException
                     {
                         close = true;
                     }
-#endif
                     
                     if (close)
                     {
@@ -1638,13 +1418,9 @@ namespace GnatMQForAzure
 
             while (this.isRunning)
             {
-#if (MF_FRAMEWORK_VERSION_V4_2 || MF_FRAMEWORK_VERSION_V4_3 || COMPACT_FRAMEWORK)
-                // waiting...
-                this.keepAliveEvent.WaitOne(wait, false);
-#else
+
                 // waiting...
                 this.keepAliveEvent.WaitOne(wait);
-#endif
 
                 if (this.isRunning)
                 {
@@ -1653,14 +1429,8 @@ namespace GnatMQForAzure
                     // if timeout exceeded ...
                     if (delta >= this.keepAlivePeriod)
                     {
-#if BROKER
                         // client must close connection
                         this.OnConnectionClosing();
-#else
-                        // ... send keep alive
-						this.Ping();
-						wait = this.keepAlivePeriod;
-#endif
                     }
                     else
                     {
@@ -1681,7 +1451,6 @@ namespace GnatMQForAzure
         {
             while (this.isRunning)
             {
-#if BROKER
                 if ((this.eventQueue.Count == 0) && !this.isConnectionClosing)
                 {
                     // broker need to receive the first message (CONNECT)
@@ -1704,11 +1473,6 @@ namespace GnatMQForAzure
                         this.receiveEventWaitHandle.WaitOne();
                     }
                 }
-#else
-                if ((this.eventQueue.Count == 0) && !this.isConnectionClosing)
-                    // wait on receiving message from client
-                    this.receiveEventWaitHandle.WaitOne();
-#endif
 
                 // check if it is running or we are closing client
                 if (this.isRunning)
@@ -1733,25 +1497,19 @@ namespace GnatMQForAzure
                                 // CONNECT message received
                                 case MqttMsgBase.MQTT_MSG_CONNECT_TYPE:
 
-#if BROKER
                                     // raise connected client event (CONNECT message received)
                                     this.OnMqttMsgConnected((MqttMsgConnect)msg);
                                     break;
-#else
-                                    throw new MqttClientException(MqttClientErrorCode.WrongBrokerMessage);
-#endif
+
 
                                 // SUBSCRIBE message received
                                 case MqttMsgBase.MQTT_MSG_SUBSCRIBE_TYPE:
 
-#if BROKER
                                     MqttMsgSubscribe subscribe = (MqttMsgSubscribe)msg;
                                     // raise subscribe topic event (SUBSCRIBE message received)
                                     this.OnMqttMsgSubscribeReceived(subscribe.MessageId, subscribe.Topics, subscribe.QoSLevels);
                                     break;
-#else
-                                    throw new MqttClientException(MqttClientErrorCode.WrongBrokerMessage);
-#endif
+
 
                                 // SUBACK message received
                                 case MqttMsgBase.MQTT_MSG_SUBACK_TYPE:
@@ -1798,14 +1556,11 @@ namespace GnatMQForAzure
                                 // UNSUBSCRIBE message received from client
                                 case MqttMsgBase.MQTT_MSG_UNSUBSCRIBE_TYPE:
 
-#if BROKER
                                     MqttMsgUnsubscribe unsubscribe = (MqttMsgUnsubscribe)msg;
                                     // raise unsubscribe topic event (UNSUBSCRIBE message received)
                                     this.OnMqttMsgUnsubscribeReceived(unsubscribe.MessageId, unsubscribe.Topics);
                                     break;
-#else
-                                    throw new MqttClientException(MqttClientErrorCode.WrongBrokerMessage);
-#endif
+
 
                                 // UNSUBACK message received
                                 case MqttMsgBase.MQTT_MSG_UNSUBACK_TYPE:
@@ -1817,13 +1572,10 @@ namespace GnatMQForAzure
                                 // DISCONNECT message received from client
                                 case MqttMsgDisconnect.MQTT_MSG_DISCONNECT_TYPE:
 
-#if BROKER
                                     // raise disconnected client event (DISCONNECT message received)
                                     this.OnMqttMsgDisconnected();
                                     break;
-#else
-                                    throw new MqttClientException(MqttClientErrorCode.WrongBrokerMessage);
-#endif
+
                             }
                         }
                     }
@@ -1859,13 +1611,8 @@ namespace GnatMQForAzure
             {
                 while (this.isRunning)
                 {
-#if (MF_FRAMEWORK_VERSION_V4_2 || MF_FRAMEWORK_VERSION_V4_3 || COMPACT_FRAMEWORK)
-                    // wait on message queueud to inflight
-                    this.inflightWaitHandle.WaitOne(timeout, false);
-#else
                     // wait on message queueud to inflight
                     this.inflightWaitHandle.WaitOne(timeout);
-#endif
 
                     // it could be unblocked because Close() method is joining
                     if (this.isRunning)
@@ -1921,9 +1668,6 @@ namespace GnatMQForAzure
                                             this.OnInternalEvent(internalEvent);
                                         }
 
-#if TRACE
-                                        Trace.WriteLine(TraceLevel.Queuing, "processed {0}", msgInflight);
-#endif
                                         break;
 
                                     case MqttMsgState.QueuedQos1:
@@ -1972,9 +1716,6 @@ namespace GnatMQForAzure
                                             // notify published message from broker and acknowledged
                                             this.OnInternalEvent(internalEvent);
 
-#if TRACE
-                                            Trace.WriteLine(TraceLevel.Queuing, "processed {0}", msgInflight);
-#endif
                                         }
                                         break;
 
@@ -2043,9 +1784,6 @@ namespace GnatMQForAzure
                                                         this.internalQueue.Dequeue();
                                                         acknowledge = true;
                                                         msgReceivedProcessed = true;
-#if TRACE
-                                                        Trace.WriteLine(TraceLevel.Queuing, "dequeued {0}", msgReceived);
-#endif
                                                     }
 
                                                     // if PUBACK received, confirm published with flag
@@ -2060,18 +1798,11 @@ namespace GnatMQForAzure
                                                     // PUBACK received for PUBLISH message with QoS Level 1, remove from session state
                                                     if ((msgInflight.Type == MqttMsgBase.MQTT_MSG_PUBLISH_TYPE) &&
                                                         (this.session != null) &&
-#if (MF_FRAMEWORK_VERSION_V4_2 || MF_FRAMEWORK_VERSION_V4_3 || COMPACT_FRAMEWORK)
-                                                        (this.session.InflightMessages.Contains(msgContext.Key)))
-#else
                                                         (this.session.InflightMessages.ContainsKey(msgContext.Key)))
-#endif
                                                     {
                                                         this.session.InflightMessages.Remove(msgContext.Key);
                                                     }
 
-#if TRACE
-                                                    Trace.WriteLine(TraceLevel.Queuing, "processed {0}", msgInflight);
-#endif
                                                 }
                                             }
 
@@ -2102,11 +1833,7 @@ namespace GnatMQForAzure
                                                         {
                                                             // PUBACK not received in time, PUBLISH retries failed, need to remove from session inflight messages too
                                                             if ((this.session != null) &&
-#if (MF_FRAMEWORK_VERSION_V4_2 || MF_FRAMEWORK_VERSION_V4_3 || COMPACT_FRAMEWORK)
-                                                                (this.session.InflightMessages.Contains(msgContext.Key)))
-#else
                                                                 (this.session.InflightMessages.ContainsKey(msgContext.Key)))
-#endif
                                                             {
                                                                 this.session.InflightMessages.Remove(msgContext.Key);
                                                             }
@@ -2157,9 +1884,6 @@ namespace GnatMQForAzure
                                                         this.internalQueue.Dequeue();
                                                         acknowledge = true;
                                                         msgReceivedProcessed = true;
-#if TRACE
-                                                        Trace.WriteLine(TraceLevel.Queuing, "dequeued {0}", msgReceived);
-#endif
                                                     }
 
                                                     MqttMsgPubrel pubrel = new MqttMsgPubrel();
@@ -2201,11 +1925,7 @@ namespace GnatMQForAzure
                                                     {
                                                         // PUBREC not received in time, PUBLISH retries failed, need to remove from session inflight messages too
                                                         if ((this.session != null) &&
-#if (MF_FRAMEWORK_VERSION_V4_2 || MF_FRAMEWORK_VERSION_V4_3 || COMPACT_FRAMEWORK)
-                                                            (this.session.InflightMessages.Contains(msgContext.Key)))
-#else
                                                             (this.session.InflightMessages.ContainsKey(msgContext.Key)))
-#endif
                                                         {
                                                             this.session.InflightMessages.Remove(msgContext.Key);
                                                         }
@@ -2251,9 +1971,6 @@ namespace GnatMQForAzure
                                                         // received message processed
                                                         this.internalQueue.Dequeue();
                                                         msgReceivedProcessed = true;
-#if TRACE
-                                                        Trace.WriteLine(TraceLevel.Queuing, "dequeued {0}", msgReceived);
-#endif
                                                     }
 
                                                     MqttMsgPubcomp pubcomp = new MqttMsgPubcomp();
@@ -2268,18 +1985,10 @@ namespace GnatMQForAzure
                                                     // PUBREL received (and PUBCOMP sent) for PUBLISH message with QoS Level 2, remove from session state
                                                     if ((msgInflight.Type == MqttMsgBase.MQTT_MSG_PUBLISH_TYPE) &&
                                                         (this.session != null) &&
-#if (MF_FRAMEWORK_VERSION_V4_2 || MF_FRAMEWORK_VERSION_V4_3 || COMPACT_FRAMEWORK)
-                                                        (this.session.InflightMessages.Contains(msgContext.Key)))
-#else
                                                         (this.session.InflightMessages.ContainsKey(msgContext.Key)))
-#endif
                                                     {
                                                         this.session.InflightMessages.Remove(msgContext.Key);
                                                     }
-
-#if TRACE
-                                                    Trace.WriteLine(TraceLevel.Queuing, "processed {0}", msgInflight);
-#endif
                                                 }
                                                 else
                                                 {
@@ -2319,9 +2028,6 @@ namespace GnatMQForAzure
                                                         this.internalQueue.Dequeue();
                                                         acknowledge = true;
                                                         msgReceivedProcessed = true;
-#if TRACE
-                                                        Trace.WriteLine(TraceLevel.Queuing, "dequeued {0}", msgReceived);
-#endif
                                                     }
 
                                                     internalEvent = new MsgPublishedInternalEvent(msgReceived, true);
@@ -2331,18 +2037,10 @@ namespace GnatMQForAzure
                                                     // PUBCOMP received for PUBLISH message with QoS Level 2, remove from session state
                                                     if ((msgInflight.Type == MqttMsgBase.MQTT_MSG_PUBLISH_TYPE) &&
                                                         (this.session != null) &&
-#if (MF_FRAMEWORK_VERSION_V4_2 || MF_FRAMEWORK_VERSION_V4_3 || COMPACT_FRAMEWORK)
-                                                        (this.session.InflightMessages.Contains(msgContext.Key)))
-#else
                                                         (this.session.InflightMessages.ContainsKey(msgContext.Key)))
-#endif
                                                     {
                                                         this.session.InflightMessages.Remove(msgContext.Key);
                                                     }
-
-#if TRACE
-                                                    Trace.WriteLine(TraceLevel.Queuing, "processed {0}", msgInflight);
-#endif
                                                 }
                                             }
                                             // it is a PUBREC message
@@ -2358,9 +2056,6 @@ namespace GnatMQForAzure
                                                         this.internalQueue.Dequeue();
                                                         acknowledge = true;
                                                         msgReceivedProcessed = true;
-#if TRACE
-                                                        Trace.WriteLine(TraceLevel.Queuing, "dequeued {0}", msgReceived);
-#endif
 
                                                         // re-enqueue message
                                                         this.inflightQueue.Enqueue(msgContext);
@@ -2390,11 +2085,7 @@ namespace GnatMQForAzure
                                                     {
                                                         // PUBCOMP not received, PUBREL retries failed, need to remove from session inflight messages too
                                                         if ((this.session != null) &&
-#if (MF_FRAMEWORK_VERSION_V4_2 || MF_FRAMEWORK_VERSION_V4_3 || COMPACT_FRAMEWORK)
-                                                            (this.session.InflightMessages.Contains(msgContext.Key)))
-#else
                                                             (this.session.InflightMessages.ContainsKey(msgContext.Key)))
-#endif
                                                         {
                                                             this.session.InflightMessages.Remove(msgContext.Key);
                                                         }
@@ -2471,9 +2162,6 @@ namespace GnatMQForAzure
                             if ((msgReceived != null) && !msgReceivedProcessed)
                             {
                                 this.internalQueue.Dequeue();
-#if TRACE
-                                Trace.WriteLine(TraceLevel.Queuing, "dequeued {0} orphan", msgReceived);
-#endif
                             }
                         }
                     }
@@ -2486,9 +2174,7 @@ namespace GnatMQForAzure
                     // re-enqueue message
                     this.inflightQueue.Enqueue(msgContext);
 
-#if TRACE
-                Trace.WriteLine(TraceLevel.Error, "Exception occurred: {0}", e.ToString());
-#endif
+
 
                 // raise disconnection client event
                 this.OnConnectionClosing();
@@ -2558,7 +2244,6 @@ namespace GnatMQForAzure
             }
         }
 
-#if BROKER
 
         /// <summary>
         /// Load a given session
@@ -2575,7 +2260,6 @@ namespace GnatMQForAzure
                 this.RestoreSession();
             }
         }
-#endif
 
         /// <summary>
         /// Generate the next message identifier

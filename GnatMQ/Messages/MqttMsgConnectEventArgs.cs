@@ -15,12 +15,6 @@ Contributors:
    David Kristensen - optimalization for the azure platform
 */
 
-#if (!MF_FRAMEWORK_VERSION_V4_2 && !MF_FRAMEWORK_VERSION_V4_3)
-
-#else
-using Microsoft.SPOT;
-#endif
-
 namespace GnatMQForAzure.Messages
 {
     using System;
@@ -31,11 +25,6 @@ namespace GnatMQForAzure.Messages
     public class MqttMsgConnectEventArgs : EventArgs
     {
         /// <summary>
-        /// Message received from client
-        /// </summary>
-        public MqttMsgConnect Message { get; private set; }
-
-        /// <summary>
         /// Constructor
         /// </summary>
         /// <param name="msg">CONNECT message received from client</param>
@@ -43,5 +32,10 @@ namespace GnatMQForAzure.Messages
         {
             this.Message = connect;
         }
+
+        /// <summary>
+        /// Message received from client
+        /// </summary>
+        public MqttMsgConnect Message { get; private set; }
     }
 } 

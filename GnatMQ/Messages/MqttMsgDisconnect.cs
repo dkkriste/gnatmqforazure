@@ -71,17 +71,5 @@ namespace GnatMQForAzure.Messages
 
             return buffer;
         }
-
-        public override string ToString()
-        {
-#if TRACE
-            return this.GetTraceString(
-                "DISCONNECT",
-                null,
-                null);
-#else
-            return base.ToString();
-#endif
-        }
     }
 }

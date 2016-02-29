@@ -15,12 +15,6 @@ Contributors:
    David Kristensen - optimalization for the azure platform
 */
 
-#if (!MF_FRAMEWORK_VERSION_V4_2 && !MF_FRAMEWORK_VERSION_V4_3)
-
-#else
-using Microsoft.SPOT;
-#endif
-
 namespace GnatMQForAzure.Messages
 {
     using System;
