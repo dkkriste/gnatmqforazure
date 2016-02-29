@@ -25,19 +25,9 @@ namespace GnatMQForAzure.Session
     public abstract class MqttSession
     {
         /// <summary>
-        /// Client Id
-        /// </summary>
-        public string ClientId { get; set; }
-
-        /// <summary>
-        /// Messages inflight during session
-        /// </summary>
-        public Hashtable InflightMessages { get; set; }
-
-        /// <summary>
         /// Constructor
         /// </summary>
-        public MqttSession()
+        protected MqttSession()
             : this(null)
         {
         }
@@ -46,11 +36,21 @@ namespace GnatMQForAzure.Session
         /// Constructor
         /// </summary>
         /// <param name="clientId">Client Id to create session</param>
-        public MqttSession(string clientId)
+        protected MqttSession(string clientId)
         {
             this.ClientId = clientId;
             this.InflightMessages = new Hashtable();
         }
+
+        /// <summary>
+        /// Client Id
+        /// </summary>
+        public string ClientId { get; set; }
+
+        /// <summary>
+        /// Messages inflight during session
+        /// </summary>
+        public Hashtable InflightMessages { get; set; }
 
         /// <summary>
         /// Clean session

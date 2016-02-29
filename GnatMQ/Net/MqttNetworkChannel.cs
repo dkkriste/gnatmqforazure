@@ -41,9 +41,6 @@ namespace GnatMQForAzure.Net
         private readonly LocalCertificateSelectionCallback userCertificateSelectionCallback;
 #endif
         // remote host information
-        private string remoteHostName;
-        private IPAddress remoteIpAddress;
-        private int remotePort;
 
         // socket for communication
         private Socket socket;
@@ -63,17 +60,17 @@ namespace GnatMQForAzure.Net
         /// <summary>
         /// Remote host name
         /// </summary>
-        public string RemoteHostName { get { return this.remoteHostName; } }
+        public string RemoteHostName { get; }
 
         /// <summary>
         /// Remote IP address
         /// </summary>
-        public IPAddress RemoteIpAddress { get { return this.remoteIpAddress; } }
+        public IPAddress RemoteIpAddress { get; }
 
         /// <summary>
         /// Remote port
         /// </summary>
-        public int RemotePort { get { return this.remotePort; } }
+        public int RemotePort { get; }
 
 #if SSL
         // SSL stream
@@ -210,9 +207,9 @@ namespace GnatMQForAzure.Net
                 }
             }
 
-            this.remoteHostName = remoteHostName;
-            this.remoteIpAddress = remoteIpAddress;
-            this.remotePort = remotePort;
+            this.RemoteHostName = remoteHostName;
+            this.RemoteIpAddress = remoteIpAddress;
+            this.RemotePort = remotePort;
             this.secure = secure;
             this.caCert = caCert;
             this.clientCert = clientCert;
@@ -228,9 +225,9 @@ namespace GnatMQForAzure.Net
         /// </summary>
         public void Connect()
         {
-            this.socket = new Socket(this.remoteIpAddress.GetAddressFamily(), SocketType.Stream, ProtocolType.Tcp);
+            this.socket = new Socket(this.RemoteIpAddress.GetAddressFamily(), SocketType.Stream, ProtocolType.Tcp);
             // try connection to the broker
-            this.socket.Connect(new IPEndPoint(this.remoteIpAddress, this.remotePort));
+            this.socket.Connect(new IPEndPoint(this.RemoteIpAddress, this.RemotePort));
 
 #if SSL
             // secure channel requested
@@ -257,7 +254,7 @@ namespace GnatMQForAzure.Net
                 if (this.clientCert != null)
                     clientCertificates = new X509CertificateCollection(new X509Certificate[] { this.clientCert });
 
-                this.sslStream.AuthenticateAsClient(this.remoteHostName,
+                this.sslStream.AuthenticateAsClient(this.RemoteHostName,
                     clientCertificates,
                     MqttSslUtility.ToSslPlatformEnum(this.sslProtocol),
                     false);

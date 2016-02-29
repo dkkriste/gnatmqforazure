@@ -20,33 +20,6 @@ namespace GnatMQForAzure.Exceptions
     using System;
 
     /// <summary>
-    /// MQTT client exception
-    /// </summary>
-    public class MqttClientException : Exception
-    {
-        /// <summary>
-        /// Constructor
-        /// </summary>
-        /// <param name="code">Error code</param>
-        public MqttClientException(MqttClientErrorCode errorCode)
-        {
-            this.errorCode = errorCode;
-        }
-
-        // error code
-        private MqttClientErrorCode errorCode;
-
-        /// <summary>
-        /// Error code
-        /// </summary>
-        public MqttClientErrorCode ErrorCode
-        {
-            get { return this.errorCode; }
-            set { this.errorCode = value; }
-        }
-    }
-
-    /// <summary>
     /// MQTT client erroro code
     /// </summary>
     public enum MqttClientErrorCode
@@ -129,5 +102,25 @@ namespace GnatMQForAzure.Exceptions
         /// Invalid protocol name
         /// </summary>
         InvalidProtocolName
+    }
+
+    /// <summary>
+    /// MQTT client exception
+    /// </summary>
+    public class MqttClientException : Exception
+    {
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="code">Error code</param>
+        public MqttClientException(MqttClientErrorCode errorCode)
+        {
+            this.ErrorCode = errorCode;
+        }
+
+        /// <summary>
+        /// Error code
+        /// </summary>
+        public MqttClientErrorCode ErrorCode { get; set; }
     }
 }

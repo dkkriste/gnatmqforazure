@@ -36,7 +36,7 @@ namespace GnatMQForAzure.Exceptions
         /// </summary>
         /// <param name="e">Inner Exception</param>
         public MqttCommunicationException(Exception e)
-            : base(String.Empty, e)
+            : base(string.Empty, e)
         {
         }
     }

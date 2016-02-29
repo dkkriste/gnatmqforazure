@@ -30,6 +30,11 @@ namespace GnatMQForAzure.Communication
     public interface IMqttCommunicationLayer
     {
         /// <summary>
+        /// Client connected event
+        /// </summary>
+        event MqttClientConnectedEventHandler ClientConnected;
+
+        /// <summary>
         /// Start communication layer listening
         /// </summary>
         void Start();
@@ -38,10 +43,5 @@ namespace GnatMQForAzure.Communication
         /// Stop communication layer listening
         /// </summary>
         void Stop();
-
-        /// <summary>
-        /// Client connected event
-        /// </summary>
-        event MqttClientConnectedEventHandler ClientConnected;
     }
 }

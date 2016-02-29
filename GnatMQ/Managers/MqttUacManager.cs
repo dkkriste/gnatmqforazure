@@ -51,9 +51,13 @@ namespace GnatMQForAzure.Managers
         public bool UserAuthentication(string username, string password)
         {
             if (this.userAuth == null)
+            {
                 return true;
+            }
             else
+            {
                 return this.userAuth(username, password);
+            }
         }
     }
 }

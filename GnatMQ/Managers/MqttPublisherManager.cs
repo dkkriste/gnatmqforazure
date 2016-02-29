@@ -31,32 +31,20 @@ namespace GnatMQForAzure.Managers
     /// </summary>
     public class MqttPublisherManager
     {
-        #region Constants ...
-
-        // topic wildcards '+' and '#'
-        private const string PLUS_WILDCARD = "+";
-        private const string SHARP_WILDCARD = "#";
-
-        // replace for wildcards '+' and '#' for using regular expression on topic match
-        private const string PLUS_WILDCARD_REPLACE = @"[^/]+";
-        private const string SHARP_WILDCARD_REPLACE = @".*";
-
-        // name for listener thread
-        private const string PUBLISH_THREAD_NAME = "MqttPublishThread";
-
-        #endregion
-
         // queue messages to publish
         private Queue<MqttMsgBase> publishQueue;
 
         // event for waiting thread end
         private AutoResetEvent publishEventEnd;
+
         // event for starting publish
         private AutoResetEvent publishQueueWaitHandle;
+
         private bool isRunning;
 
         // reference to subscriber manager
         private MqttSubscriberManager subscriberManager;
+
         // reference to session manager
         private MqttSessionManager sessionManager;
 

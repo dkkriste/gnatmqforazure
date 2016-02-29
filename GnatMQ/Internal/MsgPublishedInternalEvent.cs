@@ -24,22 +24,6 @@ namespace GnatMQForAzure.Internal
     /// </summary>
     public class MsgPublishedInternalEvent : MsgInternalEvent
     {
-        #region Properties...
-
-        /// <summary>
-        /// Message published (or failed due to retries)
-        /// </summary>
-        public bool IsPublished
-        {
-            get { return this.isPublished; }
-            internal set { this.isPublished = value; }
-        }
-
-        #endregion
-
-        // published flag
-        bool isPublished;
-
         /// <summary>
         /// Constructor
         /// </summary>
@@ -48,7 +32,16 @@ namespace GnatMQForAzure.Internal
         public MsgPublishedInternalEvent(MqttMsgBase msg, bool isPublished) 
             : base(msg)
         {
-            this.isPublished = isPublished;
+            this.IsPublished = isPublished;
         }
+
+        #region Properties...
+
+        /// <summary>
+        /// Message published (or failed due to retries)
+        /// </summary>
+        public bool IsPublished { get; internal set; }
+
+        #endregion
     }
 }

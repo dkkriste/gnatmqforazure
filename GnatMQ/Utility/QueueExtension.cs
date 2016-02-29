@@ -42,7 +42,9 @@ namespace GnatMQForAzure.Utility
             foreach (var item in queue)
             {
                 if (predicate(item))
+                {
                     return item;
+                }
             }
             return null;
         }

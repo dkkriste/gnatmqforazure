@@ -91,9 +91,13 @@ namespace GnatMQForAzure.Managers
         public MqttBrokerSession GetSession(string clientId)
         {
             if (!this.sessions.ContainsKey(clientId))
+            {
                 return null;
+            }
             else
+            {
                 return this.sessions[clientId];
+            }
         }
 
         /// <summary>

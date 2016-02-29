@@ -37,6 +37,39 @@ namespace GnatMQForAzure
         // default inflight queue size
         public const int MQTT_MAX_INFLIGHT_QUEUE_SIZE = int.MaxValue;
 
+        // singleton instance
+        private static MqttSettings instance;
+
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        private MqttSettings()
+        {
+            this.Port = MQTT_BROKER_DEFAULT_PORT;
+            this.SslPort = MQTT_BROKER_DEFAULT_SSL_PORT;
+            this.TimeoutOnReceiving = MQTT_DEFAULT_TIMEOUT;
+            this.AttemptsOnRetry = MQTT_ATTEMPTS_RETRY;
+            this.DelayOnRetry = MQTT_DELAY_RETRY;
+            this.TimeoutOnConnection = MQTT_CONNECT_TIMEOUT;
+            this.InflightQueueSize = MQTT_MAX_INFLIGHT_QUEUE_SIZE;
+        }
+
+        /// <summary>
+        /// Singleton instance of settings
+        /// </summary>
+        public static MqttSettings Instance
+        {
+            get
+            {
+                if (instance == null)
+                {
+                    instance = new MqttSettings();
+                }
+
+                return instance;
+            }
+        }
+
         /// <summary>
         /// Listening connection port
         /// </summary>
@@ -71,35 +104,5 @@ namespace GnatMQForAzure
         /// Inflight queue size
         /// </summary>
         public int InflightQueueSize { get; set; }
-        
-        /// <summary>
-        /// Singleton instance of settings
-        /// </summary>
-        public static MqttSettings Instance
-        {
-            get
-            {
-                if (instance == null)
-                    instance = new MqttSettings();
-                return instance;
-            }
-        }
-
-        // singleton instance
-        private static MqttSettings instance;
-
-        /// <summary>
-        /// Constructor
-        /// </summary>
-        private MqttSettings()
-        {
-            this.Port = MQTT_BROKER_DEFAULT_PORT;
-            this.SslPort = MQTT_BROKER_DEFAULT_SSL_PORT;
-            this.TimeoutOnReceiving = MQTT_DEFAULT_TIMEOUT;
-            this.AttemptsOnRetry = MQTT_ATTEMPTS_RETRY;
-            this.DelayOnRetry = MQTT_DELAY_RETRY;
-            this.TimeoutOnConnection = MQTT_CONNECT_TIMEOUT;
-            this.InflightQueueSize = MQTT_MAX_INFLIGHT_QUEUE_SIZE;
-        }
     }
 }

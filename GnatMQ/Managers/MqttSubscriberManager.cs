@@ -125,7 +125,9 @@ namespace GnatMQForAzure.Managers
 
                         // remove topic if there aren't subscribers
                         if (this.subscribers[topicReplaced].Count == 0)
+                        {
                             this.subscribers.Remove(topicReplaced);
+                        }
                     }
                 }
             }
@@ -160,14 +162,18 @@ namespace GnatMQForAzure.Managers
 
                         // add topic to remove list if there aren't subscribers
                         if (this.subscribers[topic].Count == 0)
+                        {
                             topicToRemove.Add(topic);
+                        }
                     }
                 }
 
                 // remove topic without subscribers
                 // loop needed to avoid exception on modify collection inside previous loop
                 foreach (string topic in topicToRemove)
+                {
                     this.subscribers.Remove(topic);
+                }
             }
         }
 
@@ -252,50 +258,6 @@ namespace GnatMQForAzure.Managers
 
             // I need all subscriptions, also overlapped (used to save session)
             return query.ToList();
-        }
-    }
-
-    /// <summary>
-    /// MQTT subscription comparer
-    /// </summary>
-    public class MqttSubscriptionComparer : IEqualityComparer<MqttSubscription>
-    {
-        /// <summary>
-        /// MQTT subscription comparer type
-        /// </summary>
-        public MqttSubscriptionComparerType Type { get; set; }
-
-        /// <summary>
-        /// Constructor
-        /// </summary>
-        /// <param name="type">MQTT subscription comparer type</param>
-        public MqttSubscriptionComparer(MqttSubscriptionComparerType type)
-        {
-            this.Type = type;
-        }
-
-        public bool Equals(MqttSubscription x, MqttSubscription y)
-        {
-            if (this.Type == MqttSubscriptionComparerType.OnClientId)
-                return x.ClientId.Equals(y.ClientId);
-            else if (this.Type == MqttSubscriptionComparerType.OnTopic)
-                return (new Regex(x.Topic)).IsMatch(y.Topic);
-            else
-                return false;
-        }
-
-        public int GetHashCode(MqttSubscription obj)
-        {
-            return obj.ClientId.GetHashCode();
-        }
-
-        /// <summary>
-        /// MQTT subscription comparer type
-        /// </summary>
-        public enum MqttSubscriptionComparerType
-        {
-            OnClientId,
-            OnTopic
         }
     }
 

@@ -51,6 +51,7 @@
     <Compile Include="Internal\InternalEvent.cs" />
     <Compile Include="Internal\MsgInternalEvent.cs" />
     <Compile Include="Internal\MsgPublishedInternalEvent.cs" />
+    <Compile Include="Managers\MqttSubscriptionComparer.cs" />
     <Compile Include="Messages\MqttMsgUnsubscribeEventArgs.cs" />
     <Compile Include="Messages\MqttMsgSubscribeEventArgs.cs" />
     <Compile Include="Messages\MqttMsgConnectEventArgs.cs" />
@@ -92,7 +93,6 @@
     <Compile Include="Session\MqttClientSession.cs" />
     <Compile Include="Session\MqttSession.cs" />
     <Compile Include="Utility\QueueExtension.cs" />
-    <Compile Include="Utility\Trace.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
