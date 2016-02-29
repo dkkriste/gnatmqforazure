@@ -21,6 +21,8 @@ namespace GnatMQForAzure.Managers
     using System.Linq;
     using System.Text.RegularExpressions;
 
+    using GnatMQForAzure.Utility;
+
     /// <summary>
     /// Manager for topics and subscribers
     /// </summary>

@@ -15,23 +15,12 @@ Contributors:
    David Kristensen - optimalization for the azure platform
 */
 
-namespace GnatMQForAzure.Net
+namespace GnatMQForAzure.Events
 {
-    using System.Threading;
-
     /// <summary>
-    /// Support methods fos specific framework
+    /// Generic internal event for dispatching
     /// </summary>
-    public class Fx
+    public abstract class InternalEvent
     {
-        public static void StartThread(ThreadStart threadStart)
-        {
-            new Thread(threadStart).Start();
-        }
-
-        public static void SleepThread(int millisecondsTimeout)
-        {
-            Thread.Sleep(millisecondsTimeout);
-        }
     }
 }

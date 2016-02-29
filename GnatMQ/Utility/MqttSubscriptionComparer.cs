@@ -1,7 +1,9 @@
-namespace GnatMQForAzure.Managers
+namespace GnatMQForAzure.Utility
 {
     using System.Collections.Generic;
     using System.Text.RegularExpressions;
+
+    using GnatMQForAzure.Managers;
 
     /// <summary>
     /// MQTT subscription comparer

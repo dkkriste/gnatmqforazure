@@ -15,7 +15,7 @@ Contributors:
    David Kristensen - optimalization for the azure platform
 */
 
-namespace GnatMQForAzure
+namespace GnatMQForAzure.Contracts
 {
     /// <summary>
     /// Interface for channel under MQTT library

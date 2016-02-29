@@ -16,13 +16,17 @@ Contributors:
 */
 
 
-namespace GnatMQForAzure.Net
+namespace GnatMQForAzure.Communication
 {
     using System;
     using System.Net;
     using System.Net.Security;
     using System.Net.Sockets;
     using System.Security.Cryptography.X509Certificates;
+
+    using GnatMQForAzure.Contracts;
+    using GnatMQForAzure.Enums;
+    using GnatMQForAzure.Utility;
 
     /// <summary>
     /// Channel to communicate over the network

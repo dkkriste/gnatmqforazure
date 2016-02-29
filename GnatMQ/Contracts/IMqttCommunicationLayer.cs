@@ -15,12 +15,28 @@ Contributors:
    David Kristensen - optimalization for the azure platform
 */
 
-namespace GnatMQForAzure.Internal
+namespace GnatMQForAzure.Contracts
 {
+    using GnatMQForAzure.Communication;
+
     /// <summary>
-    /// Generic internal event for dispatching
+    /// Interface for MQTT communication layer
     /// </summary>
-    public abstract class InternalEvent
+    public interface IMqttCommunicationLayer
     {
+        /// <summary>
+        /// Client connected event
+        /// </summary>
+        event MqttClientConnectedEventHandler ClientConnected;
+
+        /// <summary>
+        /// Start communication layer listening
+        /// </summary>
+        void Start();
+
+        /// <summary>
+        /// Stop communication layer listening
+        /// </summary>
+        void Stop();
     }
 }

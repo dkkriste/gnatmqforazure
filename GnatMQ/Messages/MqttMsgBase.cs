@@ -19,6 +19,8 @@ namespace GnatMQForAzure.Messages
 {
     using System.Text;
 
+    using GnatMQForAzure.Contracts;
+
     /// <summary>
     /// Base class for all MQTT messages
     /// </summary>

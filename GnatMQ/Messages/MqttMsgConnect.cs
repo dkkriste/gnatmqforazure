@@ -20,6 +20,7 @@ namespace GnatMQForAzure.Messages
     using System;
     using System.Text;
 
+    using GnatMQForAzure.Contracts;
     using GnatMQForAzure.Exceptions;
 
     /// <summary>

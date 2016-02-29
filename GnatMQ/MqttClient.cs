@@ -29,10 +29,12 @@ namespace GnatMQForAzure
     using System.Security.Cryptography.X509Certificates;
     using System.Threading;
 
+    using GnatMQForAzure.Communication;
+    using GnatMQForAzure.Contracts;
+    using GnatMQForAzure.Enums;
+    using GnatMQForAzure.Events;
     using GnatMQForAzure.Exceptions;
-    using GnatMQForAzure.Internal;
     using GnatMQForAzure.Messages;
-    using GnatMQForAzure.Net;
     using GnatMQForAzure.Session;
     using GnatMQForAzure.Utility;
 

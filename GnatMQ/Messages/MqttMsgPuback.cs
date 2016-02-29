@@ -17,6 +17,7 @@ Contributors:
 
 namespace GnatMQForAzure.Messages
 {
+    using GnatMQForAzure.Contracts;
     using GnatMQForAzure.Exceptions;
 
     /// <summary>

@@ -1,4 +1,4 @@
-namespace GnatMQForAzure.Managers
+namespace GnatMQForAzure.Delegates
 {
     /// <summary>
     /// Delegate for executing user authentication

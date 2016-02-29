@@ -15,7 +15,7 @@ Contributors:
    David Kristensen - optimalization for the azure platform
 */
 
-namespace GnatMQForAzure.Net
+namespace GnatMQForAzure.Communication
 {
     using System;
     using System.Net;
@@ -24,7 +24,8 @@ namespace GnatMQForAzure.Net
     using System.Security.Cryptography.X509Certificates;
     using System.Threading;
 
-    using GnatMQForAzure.Communication;
+    using GnatMQForAzure.Contracts;
+    using GnatMQForAzure.Enums;
 
     /// <summary>
     /// MQTT communication layer

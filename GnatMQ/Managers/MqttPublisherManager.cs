@@ -23,8 +23,8 @@ namespace GnatMQForAzure.Managers
     using System.Threading;
 
     using GnatMQForAzure.Messages;
-    using GnatMQForAzure.Net;
     using GnatMQForAzure.Session;
+    using GnatMQForAzure.Utility;
 
     /// <summary>
     /// Manager for publishing messages

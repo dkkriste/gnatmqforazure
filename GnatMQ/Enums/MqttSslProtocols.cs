@@ -15,31 +15,17 @@ Contributors:
    David Kristensen - optimalization for the azure platform
 */
 
-namespace GnatMQForAzure.Internal
+namespace GnatMQForAzure.Enums
 {
-    using GnatMQForAzure.Messages;
-
     /// <summary>
-    /// Internal event with a message
+    /// Supported SSL/TLS protocol versions
     /// </summary>
-    public class MsgInternalEvent : InternalEvent
+    public enum MqttSslProtocols
     {
-        /// <summary>
-        /// Constructor
-        /// </summary>
-        /// <param name="msg">Related message</param>
-        public MsgInternalEvent(MqttMsgBase msg)
-        {
-            this.Message = msg;
-        }
-
-        #region Properties ...
-
-        /// <summary>
-        /// Related message
-        /// </summary>
-        public MqttMsgBase Message { get; set; }
-
-        #endregion
+        None,
+        SSLv3,
+        TLSv1_0,
+        TLSv1_1,
+        TLSv1_2
     }
 }

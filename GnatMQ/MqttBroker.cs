@@ -25,10 +25,12 @@ namespace GnatMQForAzure
     using System.Text;
 
     using GnatMQForAzure.Communication;
+    using GnatMQForAzure.Contracts;
+    using GnatMQForAzure.Delegates;
+    using GnatMQForAzure.Enums;
     using GnatMQForAzure.Exceptions;
     using GnatMQForAzure.Managers;
     using GnatMQForAzure.Messages;
-    using GnatMQForAzure.Net;
     using GnatMQForAzure.Session;
 
     /// <summary>

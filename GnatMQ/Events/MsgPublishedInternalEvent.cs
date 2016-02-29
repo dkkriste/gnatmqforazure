@@ -15,26 +15,33 @@ Contributors:
    David Kristensen - optimalization for the azure platform
 */
 
-namespace GnatMQForAzure.Communication
+namespace GnatMQForAzure.Events
 {
+    using GnatMQForAzure.Messages;
+
     /// <summary>
-    /// Interface for MQTT communication layer
+    /// Internal event for a published message
     /// </summary>
-    public interface IMqttCommunicationLayer
+    public class MsgPublishedInternalEvent : MsgInternalEvent
     {
         /// <summary>
-        /// Client connected event
+        /// Constructor
         /// </summary>
-        event MqttClientConnectedEventHandler ClientConnected;
+        /// <param name="msg">Message published</param>
+        /// <param name="isPublished">Publish flag</param>
+        public MsgPublishedInternalEvent(MqttMsgBase msg, bool isPublished) 
+            : base(msg)
+        {
+            this.IsPublished = isPublished;
+        }
+
+        #region Properties...
 
         /// <summary>
-        /// Start communication layer listening
+        /// Message published (or failed due to retries)
         /// </summary>
-        void Start();
+        public bool IsPublished { get; internal set; }
 
-        /// <summary>
-        /// Stop communication layer listening
-        /// </summary>
-        void Stop();
+        #endregion
     }
 }

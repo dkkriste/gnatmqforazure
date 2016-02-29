@@ -1,4 +1,4 @@
-namespace GnatMQForAzure.Net
+namespace GnatMQForAzure.Utility
 {
     using System.Net;
     using System.Net.Sockets;

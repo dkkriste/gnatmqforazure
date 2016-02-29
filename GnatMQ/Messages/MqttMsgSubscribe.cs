@@ -21,6 +21,7 @@ namespace GnatMQForAzure.Messages
     using System.Collections.Generic;
     using System.Text;
 
+    using GnatMQForAzure.Contracts;
     using GnatMQForAzure.Exceptions;
 
     /// <summary>
