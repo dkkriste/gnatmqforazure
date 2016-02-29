@@ -23,14 +23,14 @@ namespace GnatMQForAzure
     /// <summary>
     /// MQTT client collection
     /// </summary>
-    public class MqttClientCollection : IList<MqttClient>, IEnumerable
+    public class MqttClientCollection : IList<MqttClientConnection>, IEnumerable
     {
         // clients list
-        private List<MqttClient> clients;
+        private List<MqttClientConnection> clients;
 
         public MqttClientCollection()
         {
-            this.clients = new List<MqttClient>();
+            this.clients = new List<MqttClientConnection>();
         }
                 
         #region IEnumerable ...
@@ -44,12 +44,12 @@ namespace GnatMQForAzure
 
         #region IList<MqttClient> ...
 
-        public int IndexOf(MqttClient item)
+        public int IndexOf(MqttClientConnection item)
         {
             return this.clients.IndexOf(item);
         }
 
-        public void Insert(int index, MqttClient item)
+        public void Insert(int index, MqttClientConnection item)
         {
             lock (this.clients)
             {
@@ -65,13 +65,13 @@ namespace GnatMQForAzure
             }
         }
 
-        public MqttClient this[int index]
+        public MqttClientConnection this[int index]
         {
             get { return this.clients[index]; }
             set { this.clients[index] = value; }
         }
 
-        public void Add(MqttClient item)
+        public void Add(MqttClientConnection item)
         {
             lock (this.clients)
             {
@@ -84,12 +84,12 @@ namespace GnatMQForAzure
             this.clients.Clear();
         }
 
-        public bool Contains(MqttClient item)
+        public bool Contains(MqttClientConnection item)
         {
             return this.clients.Contains(item);
         }
 
-        public void CopyTo(MqttClient[] array, int arrayIndex)
+        public void CopyTo(MqttClientConnection[] array, int arrayIndex)
         {
             this.clients.CopyTo(array, arrayIndex);
         }
@@ -104,7 +104,7 @@ namespace GnatMQForAzure
             get { return false; }
         }
 
-        public bool Remove(MqttClient item)
+        public bool Remove(MqttClientConnection item)
         {
             lock (this.clients)
             {
@@ -112,7 +112,7 @@ namespace GnatMQForAzure
             }
         }
 
-        IEnumerator<MqttClient> IEnumerable<MqttClient>.GetEnumerator()
+        IEnumerator<MqttClientConnection> IEnumerable<MqttClientConnection>.GetEnumerator()
         {
             return this.clients.GetEnumerator();
         }

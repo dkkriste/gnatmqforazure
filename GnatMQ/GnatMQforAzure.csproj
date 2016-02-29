@@ -53,6 +53,11 @@
     <Compile Include="Events\InternalEvent.cs" />
     <Compile Include="Events\MsgInternalEvent.cs" />
     <Compile Include="Events\MsgPublishedInternalEvent.cs" />
+    <Compile Include="Managers\MqttClientConnectionInflightManager.cs" />
+    <Compile Include="Managers\MqttClientConnectionInternalEventManager.cs" />
+    <Compile Include="Managers\MqttClientConnectionManager.cs" />
+    <Compile Include="Managers\MqttClientConnectionReceiveManager.cs" />
+    <Compile Include="Managers\MqttClientConnectionTimeoutManager.cs" />
     <Compile Include="Managers\MqttSubscription.cs" />
     <Compile Include="Utility\MqttSubscriptionComparer.cs" />
     <Compile Include="Delegates\MqttUserAuthenticationDelegate.cs" />
@@ -83,7 +88,7 @@
     <Compile Include="Messages\MqttMsgUnsubscribedEventArgs.cs" />
     <Compile Include="MqttClientCollection.cs" />
     <Compile Include="Communication\MqttClientConnectedEventArgs.cs" />
-    <Compile Include="MqttClient.cs" />
+    <Compile Include="MqttClientConnection.cs" />
     <Compile Include="Enums\MqttProtocolVersion.cs" />
     <Compile Include="Enums\MqttSslProtocols.cs" />
     <Compile Include="Utility\IPAddressUtility.cs" />

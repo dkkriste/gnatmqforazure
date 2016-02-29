@@ -141,7 +141,7 @@ namespace GnatMQForAzure
             this.publisherManager.Stop();
 
             // close connection with all clients
-            foreach (MqttClient client in this.clients)
+            foreach (MqttClientConnection client in this.clients)
             {
                 client.Close();
             }
@@ -150,66 +150,66 @@ namespace GnatMQForAzure
         /// <summary>
         /// Close a client
         /// </summary>
-        /// <param name="client">Client to close</param>
-        private void CloseClient(MqttClient client)
+        /// <param name="clientConnection">Client to close</param>
+        private void CloseClient(MqttClientConnection clientConnection)
         {
-            if (this.clients.Contains(client))
+            if (this.clients.Contains(clientConnection))
             {
                 // if client is connected and it has a will message
-                if (!client.IsConnected && client.WillFlag)
+                if (!clientConnection.IsConnected && clientConnection.WillFlag)
                 {
                     // create the will PUBLISH message
                     MqttMsgPublish publish =
-                        new MqttMsgPublish(client.WillTopic, Encoding.UTF8.GetBytes(client.WillMessage), false, client.WillQosLevel, false);
+                        new MqttMsgPublish(clientConnection.WillTopic, Encoding.UTF8.GetBytes(clientConnection.WillMessage), false, clientConnection.WillQosLevel, false);
 
                     // publish message through publisher manager
                     this.publisherManager.Publish(publish);
                 }
 
                 // if not clean session
-                if (!client.CleanSession)
+                if (!clientConnection.CleanSession)
                 {
-                    List<MqttSubscription> subscriptions = this.subscriberManager.GetSubscriptionsByClient(client.ClientId);
+                    List<MqttSubscription> subscriptions = this.subscriberManager.GetSubscriptionsByClient(clientConnection.ClientId);
 
                     if ((subscriptions != null) && (subscriptions.Count > 0))
                     {
-                        this.sessionManager.SaveSession(client.ClientId, client.Session, subscriptions);
+                        this.sessionManager.SaveSession(clientConnection.ClientId, clientConnection.Session, subscriptions);
 
                         // TODO : persist client session if broker close
                     }
                 }
 
                 // delete client from runtime subscription
-                this.subscriberManager.Unsubscribe(client);
+                this.subscriberManager.Unsubscribe(clientConnection);
 
                 // close the client
-                client.Close();
+                clientConnection.Close();
 
                 // remove client from the collection
-                this.clients.Remove(client);
+                this.clients.Remove(clientConnection);
             }
         }
 
         void commLayer_ClientConnected(object sender, MqttClientConnectedEventArgs e)
         {
             // register event handlers from client
-            e.Client.MqttMsgDisconnected += Client_MqttMsgDisconnected;
-            e.Client.MqttMsgPublishReceived += Client_MqttMsgPublishReceived;
-            e.Client.MqttMsgConnected += Client_MqttMsgConnected;
-            e.Client.MqttMsgSubscribeReceived += Client_MqttMsgSubscribeReceived;
-            e.Client.MqttMsgUnsubscribeReceived += Client_MqttMsgUnsubscribeReceived;
-            e.Client.ConnectionClosed += Client_ConnectionClosed;
+            e.ClientConnection.MqttMsgDisconnected += Client_MqttMsgDisconnected;
+            e.ClientConnection.MqttMsgPublishReceived += Client_MqttMsgPublishReceived;
+            e.ClientConnection.MqttMsgConnected += Client_MqttMsgConnected;
+            e.ClientConnection.MqttMsgSubscribeReceived += Client_MqttMsgSubscribeReceived;
+            e.ClientConnection.MqttMsgUnsubscribeReceived += Client_MqttMsgUnsubscribeReceived;
+            e.ClientConnection.ConnectionClosed += Client_ConnectionClosed;
 
             // add client to the collection
-            this.clients.Add(e.Client);
+            this.clients.Add(e.ClientConnection);
 
             // start client threads
-            e.Client.Open();
+            e.ClientConnection.Open();
         }
 
         void Client_MqttMsgPublishReceived(object sender, MqttMsgPublishEventArgs e)
         {
-            MqttClient client = (MqttClient)sender;
+            MqttClientConnection clientConnection = (MqttClientConnection)sender;
 
             // create PUBLISH message to publish
             // [v3.1.1] DUP flag from an incoming PUBLISH message is not propagated to subscribers
@@ -222,28 +222,28 @@ namespace GnatMQForAzure
 
         void Client_MqttMsgUnsubscribeReceived(object sender, MqttMsgUnsubscribeEventArgs e)
         {
-            MqttClient client = (MqttClient)sender;
+            MqttClientConnection clientConnection = (MqttClientConnection)sender;
 
             for (int i = 0; i < e.Topics.Length; i++)
             {
                 // unsubscribe client for each topic requested
-                this.subscriberManager.Unsubscribe(e.Topics[i], client);
+                this.subscriberManager.Unsubscribe(e.Topics[i], clientConnection);
             }
 
             try
             {
                 // send UNSUBACK message to the client
-                client.Unsuback(e.MessageId);
+                clientConnection.Unsuback(e.MessageId);
             }
             catch (MqttCommunicationException)
             {
-                this.CloseClient(client);
+                this.CloseClient(clientConnection);
             }
         }
 
         void Client_MqttMsgSubscribeReceived(object sender, MqttMsgSubscribeEventArgs e)
         {
-            MqttClient client = (MqttClient)sender;
+            MqttClientConnection clientConnection = (MqttClientConnection)sender;
 
             for (int i = 0; i < e.Topics.Length; i++)
             {
@@ -251,23 +251,23 @@ namespace GnatMQForAzure
                 //        now the broker granted the QoS levels requested by client
 
                 // subscribe client for each topic and QoS level requested
-                this.subscriberManager.Subscribe(e.Topics[i], e.QoSLevels[i], client);
+                this.subscriberManager.Subscribe(e.Topics[i], e.QoSLevels[i], clientConnection);
             }
 
             try
             {
                 // send SUBACK message to the client
-                client.Suback(e.MessageId, e.QoSLevels);
+                clientConnection.Suback(e.MessageId, e.QoSLevels);
 
                 for (int i = 0; i < e.Topics.Length; i++)
                 {
                     // publish retained message on the current subscription
-                    this.publisherManager.PublishRetaind(e.Topics[i], client.ClientId);
+                    this.publisherManager.PublishRetaind(e.Topics[i], clientConnection.ClientId);
                 }
             }
             catch (MqttCommunicationException)
             {
-                this.CloseClient(client);
+                this.CloseClient(clientConnection);
             }
         }
 
@@ -278,7 +278,7 @@ namespace GnatMQForAzure
             // [v3.1.1] generated client id for client who provides client id zero bytes length
             string clientId = null;
 
-            MqttClient client = (MqttClient)sender;
+            MqttClientConnection clientConnection = (MqttClientConnection)sender;
 
             // verify message to determine CONNACK message return code to the client
             byte returnCode = this.MqttConnectVerify(e.Message);
@@ -290,12 +290,12 @@ namespace GnatMQForAzure
             if (returnCode == MqttMsgConnack.CONN_ACCEPTED)
             {
                 // check if there is a client already connected with same client Id
-                MqttClient clientConnected = this.GetClient(clientId);
+                MqttClientConnection clientConnectionConnected = this.GetClient(clientId);
 
                 // force connection close to the existing client (MQTT protocol)
-                if (clientConnected != null)
+                if (clientConnectionConnected != null)
                 {
-                    this.CloseClient(clientConnected);
+                    this.CloseClient(clientConnectionConnected);
                 }
             }
 
@@ -318,20 +318,20 @@ namespace GnatMQForAzure
                         {
                             clientSession.InflightMessages = session.InflightMessages;
                             // [v3.1.1] session present flag
-                            if (client.ProtocolVersion == MqttProtocolVersion.Version_3_1_1)
+                            if (clientConnection.ProtocolVersion == MqttProtocolVersion.Version_3_1_1)
                                 sessionPresent = true;
                         }
 
                         // send CONNACK message to the client
-                        client.Connack(e.Message, returnCode, clientId, sessionPresent);
+                        clientConnection.Connack(e.Message, returnCode, clientId, sessionPresent);
 
                         // load/inject session to the client
-                        client.LoadSession(clientSession);
+                        clientConnection.LoadSession(clientSession);
 
                         if (session != null)
                         {
                             // set reference to connected client into the session
-                            session.Client = client;
+                            session.ClientConnection = clientConnection;
 
                             // there are saved subscriptions
                             if (session.Subscriptions != null)
@@ -339,7 +339,7 @@ namespace GnatMQForAzure
                                 // register all subscriptions for the connected client
                                 foreach (MqttSubscription subscription in session.Subscriptions)
                                 {
-                                    this.subscriberManager.Subscribe(subscription.Topic, subscription.QosLevel, client);
+                                    this.subscriberManager.Subscribe(subscription.Topic, subscription.QosLevel, clientConnection);
 
                                     // publish retained message on the current subscription
                                     this.publisherManager.PublishRetaind(subscription.Topic, clientId);
@@ -358,7 +358,7 @@ namespace GnatMQForAzure
                     else
                     {
                         // send CONNACK message to the client
-                        client.Connack(e.Message, returnCode, clientId, sessionPresent);
+                        clientConnection.Connack(e.Message, returnCode, clientId, sessionPresent);
 
                         this.sessionManager.ClearSession(clientId);
                     }
@@ -366,29 +366,29 @@ namespace GnatMQForAzure
                 else
                 {
                     // send CONNACK message to the client
-                    client.Connack(e.Message, returnCode, clientId, sessionPresent);
+                    clientConnection.Connack(e.Message, returnCode, clientId, sessionPresent);
                 }
             }
             catch (MqttCommunicationException)
             {
-                this.CloseClient(client);
+                this.CloseClient(clientConnection);
             }
         }
 
         void Client_MqttMsgDisconnected(object sender, EventArgs e)
         {
-            MqttClient client = (MqttClient)sender;
+            MqttClientConnection clientConnection = (MqttClientConnection)sender;
 
             // close the client
-            this.CloseClient(client);
+            this.CloseClient(clientConnection);
         }
 
         void Client_ConnectionClosed(object sender, EventArgs e)
         {
-            MqttClient client = (MqttClient)sender;
+            MqttClientConnection clientConnection = (MqttClientConnection)sender;
 
             // close the client
-            this.CloseClient(client);
+            this.CloseClient(clientConnection);
         }
 
         /// <summary>
@@ -437,7 +437,7 @@ namespace GnatMQForAzure
         /// </summary>
         /// <param name="clientId">Client Id to verify</param>
         /// <returns>Reference to client</returns>
-        private MqttClient GetClient(string clientId)
+        private MqttClientConnection GetClient(string clientId)
         {
             var query = from c in this.clients
                         where c.ClientId == clientId

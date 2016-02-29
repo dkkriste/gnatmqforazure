@@ -186,9 +186,9 @@ namespace GnatMQForAzure.Communication
                         channel.Accept();
 
                         // handling channel for connected client
-                        MqttClient client = new MqttClient(channel);
+                        MqttClientConnection clientConnection = new MqttClientConnection(channel);
                         // raise client raw connection event
-                        this.OnClientConnected(client);
+                        this.OnClientConnected(clientConnection);
                     }
                 }
                 catch (Exception)
@@ -203,10 +203,10 @@ namespace GnatMQForAzure.Communication
         /// Raise client connected event
         /// </summary>
         /// <param name="e">Event args</param>
-        private void OnClientConnected(MqttClient client)
+        private void OnClientConnected(MqttClientConnection clientConnection)
         {
             if (this.ClientConnected != null)
-                this.ClientConnected(this, new MqttClientConnectedEventArgs(client));
+                this.ClientConnected(this, new MqttClientConnectedEventArgs(clientConnection));
         }
     }
 }

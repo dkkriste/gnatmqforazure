@@ -219,7 +219,7 @@ namespace GnatMQForAzure.Managers
                                 qosLevel = (subscription.QosLevel < retained.QosLevel) ? subscription.QosLevel : retained.QosLevel;
 
                                 // send PUBLISH message to the current subscriber
-                                subscription.Client.Publish(retained.Topic, retained.Message, qosLevel, retained.Retain);
+                                subscription.ClientConnection.Publish(retained.Topic, retained.Message, qosLevel, retained.Retain);
                             }
                         }
                     }
@@ -252,7 +252,7 @@ namespace GnatMQForAzure.Managers
                             {
                                 qosLevel = (subscription.QosLevel < outgoingMsg.QosLevel) ? subscription.QosLevel : outgoingMsg.QosLevel;
 
-                                session.Client.Publish(outgoingMsg.Topic, outgoingMsg.Message, qosLevel, outgoingMsg.Retain);
+                                session.ClientConnection.Publish(outgoingMsg.Topic, outgoingMsg.Message, qosLevel, outgoingMsg.Retain);
                             }
                         }
                     }
@@ -282,7 +282,7 @@ namespace GnatMQForAzure.Managers
                                     qosLevel = (subscription.QosLevel < publish.QosLevel) ? subscription.QosLevel : publish.QosLevel;
 
                                     // send PUBLISH message to the current subscriber
-                                    subscription.Client.Publish(publish.Topic, publish.Message, qosLevel, publish.Retain);
+                                    subscription.ClientConnection.Publish(publish.Topic, publish.Message, qosLevel, publish.Retain);
                                 }
                             }
 
@@ -300,7 +300,7 @@ namespace GnatMQForAzure.Managers
                                     MqttSubscriptionComparer comparer = new MqttSubscriptionComparer(MqttSubscriptionComparer.MqttSubscriptionComparerType.OnClientId);
 
                                     // consider only session active for client disconnected (not online)
-                                    if (session.Client == null)
+                                    if (session.ClientConnection == null)
                                     {
                                         foreach (MqttSubscription subscription in query.Distinct(comparer))
                                         {

@@ -30,7 +30,7 @@ namespace GnatMQForAzure.Session
         /// <summary>
         /// Client related to the subscription
         /// </summary>
-        public MqttClient Client { get; set; }
+        public MqttClientConnection ClientConnection { get; set; }
 
         /// <summary>
         /// Subscriptions for the client session
@@ -48,7 +48,7 @@ namespace GnatMQForAzure.Session
         public MqttBrokerSession()
             : base()
         {
-            this.Client = null;
+            this.ClientConnection = null;
             this.Subscriptions = new List<MqttSubscription>();
             this.OutgoingMessages = new Queue<MqttMsgPublish>();
         }
@@ -56,7 +56,7 @@ namespace GnatMQForAzure.Session
         public override void Clear()
         {
             base.Clear();
-            this.Client = null;
+            this.ClientConnection = null;
             this.Subscriptions.Clear();
             this.OutgoingMessages.Clear();
         }

@@ -27,15 +27,15 @@ namespace GnatMQForAzure.Communication
         /// <summary>
         /// Constructor
         /// </summary>
-        /// <param name="client">Connected client</param>
-        public MqttClientConnectedEventArgs(MqttClient client)
+        /// <param name="clientConnection">Connected client</param>
+        public MqttClientConnectedEventArgs(MqttClientConnection clientConnection)
         {
-            this.Client = client;
+            this.ClientConnection = clientConnection;
         }
 
         /// <summary>
         /// Connected client
         /// </summary>
-        public MqttClient Client { get; private set; }
+        public MqttClientConnection ClientConnection { get; private set; }
     }
 }

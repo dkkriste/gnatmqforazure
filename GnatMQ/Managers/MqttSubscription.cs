@@ -23,7 +23,7 @@ namespace GnatMQForAzure.Managers
         /// <summary>
         /// Client related to the subscription
         /// </summary>
-        public MqttClient Client { get; set; }
+        public MqttClientConnection ClientConnection { get; set; }
 
         /// <summary>
         /// Constructor
@@ -33,7 +33,7 @@ namespace GnatMQForAzure.Managers
             this.ClientId = null;
             this.Topic = null;
             this.QosLevel = 0;
-            this.Client = null;
+            this.ClientConnection = null;
         }
 
         /// <summary>
@@ -42,13 +42,13 @@ namespace GnatMQForAzure.Managers
         /// <param name="clientId">Client Id of the subscription</param>
         /// <param name="topic">Topic of subscription</param>
         /// <param name="qosLevel">QoS level of subscription</param>
-        /// <param name="client">Client related to the subscription</param>
-        public MqttSubscription(string clientId, string topic, byte qosLevel, MqttClient client = null)
+        /// <param name="clientConnection">Client related to the subscription</param>
+        public MqttSubscription(string clientId, string topic, byte qosLevel, MqttClientConnection clientConnection = null)
         {
             this.ClientId = clientId;
             this.Topic = topic;
             this.QosLevel = qosLevel;
-            this.Client = client;
+            this.ClientConnection = clientConnection;
         }
 
         /// <summary>
@@ -59,7 +59,7 @@ namespace GnatMQForAzure.Managers
             this.ClientId = null;
             this.Topic = null;
             this.QosLevel = 0;
-            this.Client = null;
+            this.ClientConnection = null;
         }
     }
 }

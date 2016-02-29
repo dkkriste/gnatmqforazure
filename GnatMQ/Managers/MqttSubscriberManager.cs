@@ -60,8 +60,8 @@ namespace GnatMQForAzure.Managers
         /// </summary>
         /// <param name="topic">Topic for subscription</param>
         /// <param name="qosLevel">QoS level for the topic subscription</param>
-        /// <param name="client">Client to subscribe</param>
-        public void Subscribe(string topic, byte qosLevel, MqttClient client)
+        /// <param name="clientConnection">Client to subscribe</param>
+        public void Subscribe(string topic, byte qosLevel, MqttClientConnection clientConnection)
         {
             string topicReplaced = topic.Replace(PLUS_WILDCARD, PLUS_WILDCARD_REPLACE).Replace(SHARP_WILDCARD, SHARP_WILDCARD_REPLACE);
 
@@ -77,7 +77,7 @@ namespace GnatMQForAzure.Managers
 
                 // query for check client already subscribed
                 var query = from s in this.subscribers[topicReplaced]
-                            where s.ClientId == client.ClientId
+                            where s.ClientId == clientConnection.ClientId
                             select s;
 
                 // if the client isn't already subscribed to the topic 
@@ -85,10 +85,10 @@ namespace GnatMQForAzure.Managers
                 {
                     MqttSubscription subscription = new MqttSubscription()
                     {
-                        ClientId = client.ClientId,
+                        ClientId = clientConnection.ClientId,
                         Topic = topicReplaced,
                         QosLevel = qosLevel,
-                        Client = client
+                        ClientConnection = clientConnection
                     };
                     // add subscription to the list for the topic
                     this.subscribers[topicReplaced].Add(subscription);
@@ -100,8 +100,8 @@ namespace GnatMQForAzure.Managers
         /// Remove a subscriber for a topic
         /// </summary>
         /// <param name="topic">Topic for unsubscription</param>
-        /// <param name="client">Client to unsubscribe</param>
-        public void Unsubscribe(string topic, MqttClient client)
+        /// <param name="clientConnection">Client to unsubscribe</param>
+        public void Unsubscribe(string topic, MqttClientConnection clientConnection)
         {
             string topicReplaced = topic.Replace(PLUS_WILDCARD, PLUS_WILDCARD_REPLACE).Replace(SHARP_WILDCARD, SHARP_WILDCARD_REPLACE);
 
@@ -112,7 +112,7 @@ namespace GnatMQForAzure.Managers
                 {
                     // query for check client subscribed
                     var query = from s in this.subscribers[topicReplaced]
-                                where s.ClientId == client.ClientId
+                                where s.ClientId == clientConnection.ClientId
                                 select s;
 
                     // if the client is subscribed for the topic
@@ -138,8 +138,8 @@ namespace GnatMQForAzure.Managers
         /// <summary>
         /// Remove a subscriber for all topics
         /// </summary>
-        /// <param name="client">Client to unsubscribe</param>
-        public void Unsubscribe(MqttClient client)
+        /// <param name="clientConnection">Client to unsubscribe</param>
+        public void Unsubscribe(MqttClientConnection clientConnection)
         {
             lock (this.subscribers)
             {
@@ -149,7 +149,7 @@ namespace GnatMQForAzure.Managers
                 {
                     // query for check client subscribed
                     var query = from s in this.subscribers[topic]
-                                where s.ClientId == client.ClientId
+                                where s.ClientId == clientConnection.ClientId
                                 select s;
 
                     // if the client is subscribed for the topic

@@ -66,7 +66,7 @@ namespace GnatMQForAzure.Managers
             }
 
             // null reference to disconnected client
-            session.Client = null;
+            session.ClientConnection = null;
 
             // update subscriptions
             session.Subscriptions = new List<MqttSubscription>();
