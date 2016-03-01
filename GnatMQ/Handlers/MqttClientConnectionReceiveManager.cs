@@ -1,4 +1,4 @@
-﻿namespace GnatMQForAzure.Managers
+﻿namespace GnatMQForAzure.Handlers
 {
     using System;
     using System.IO;

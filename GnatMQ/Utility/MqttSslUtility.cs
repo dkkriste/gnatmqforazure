@@ -3,7 +3,7 @@ namespace GnatMQForAzure.Utility
     using System;
     using System.Security.Authentication;
 
-    using GnatMQForAzure.Enums;
+    using GnatMQForAzure.Entities.Enums;
 
     /// <summary>
     /// MQTT SSL utility class

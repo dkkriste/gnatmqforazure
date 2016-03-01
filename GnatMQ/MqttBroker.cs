@@ -26,8 +26,8 @@ namespace GnatMQForAzure
 
     using GnatMQForAzure.Communication;
     using GnatMQForAzure.Contracts;
-    using GnatMQForAzure.Delegates;
-    using GnatMQForAzure.Enums;
+    using GnatMQForAzure.Entities.Delegates;
+    using GnatMQForAzure.Entities.Enums;
     using GnatMQForAzure.Exceptions;
     using GnatMQForAzure.Managers;
     using GnatMQForAzure.Messages;

@@ -25,7 +25,7 @@ namespace GnatMQForAzure.Communication
     using System.Threading;
 
     using GnatMQForAzure.Contracts;
-    using GnatMQForAzure.Enums;
+    using GnatMQForAzure.Entities.Enums;
 
     /// <summary>
     /// MQTT communication layer

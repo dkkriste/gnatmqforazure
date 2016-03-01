@@ -15,7 +15,7 @@ Contributors:
    David Kristensen - optimalization for the azure platform
 */
 
-namespace GnatMQForAzure.Enums
+namespace GnatMQForAzure.Entities.Enums
 {
     /// <summary>
     /// Supported SSL/TLS protocol versions

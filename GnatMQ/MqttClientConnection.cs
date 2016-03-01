@@ -28,7 +28,7 @@ namespace GnatMQForAzure
 
     using GnatMQForAzure.Communication;
     using GnatMQForAzure.Contracts;
-    using GnatMQForAzure.Enums;
+    using GnatMQForAzure.Entities.Enums;
     using GnatMQForAzure.Events;
     using GnatMQForAzure.Exceptions;
     using GnatMQForAzure.Messages;
@@ -87,81 +87,24 @@ namespace GnatMQForAzure
         // connection is closing due to peer
         public bool isConnectionClosing;
 
+        public readonly SocketAsyncEventArgs ReceiveSocketAsyncEventArgs;
+
+        public readonly int ReceiveSocketOffset;
+
+        public readonly int ReceiveSocketBufferSize;
+
+        public int PreviouslyRead;
+
         #endregion
 
         #region Constructors
 
-        /// <summary>
-        /// Constructor
-        /// </summary>
-        /// <param name="brokerHostName">Broker Host Name or IP Address</param>
-        public MqttClientConnection(string brokerHostName) :
-            this(brokerHostName, MqttSettings.MQTT_BROKER_DEFAULT_PORT, false, null, null, MqttSslProtocols.None)
+        public MqttClientConnection(SocketAsyncEventArgs receiveSocketAsyncEventArgs)
         {
-        }
-
-        /// <summary>
-        /// Constructor
-        /// </summary>
-        /// <param name="brokerHostName">Broker Host Name or IP Address</param>
-        /// <param name="brokerPort">Broker port</param>
-        /// <param name="secure">Using secure connection</param>
-        /// <param name="sslProtocol">SSL/TLS protocol version</param>
-        /// <param name="caCert">CA certificate for secure connection</param>
-        /// <param name="clientCert">Client certificate</param>
-        public MqttClientConnection(string brokerHostName, int brokerPort, bool secure, X509Certificate caCert, X509Certificate clientCert, MqttSslProtocols sslProtocol)
-        {
-            this.Init(brokerHostName, brokerPort, secure, caCert, clientCert, sslProtocol, null, null);
-        }
-
-        /// <summary>
-        /// Constructor
-        /// </summary>
-        /// <param name="brokerHostName">Broker Host Name or IP Address</param>
-        /// <param name="brokerPort">Broker port</param>
-        /// <param name="secure">Using secure connection</param>
-        /// <param name="caCert">CA certificate for secure connection</param>
-        /// <param name="clientCert">Client certificate</param>
-        /// <param name="sslProtocol">SSL/TLS protocol version</param>
-        /// <param name="userCertificateValidationCallback">A RemoteCertificateValidationCallback delegate responsible for validating the certificate supplied by the remote party</param>
-        public MqttClientConnection(string brokerHostName, int brokerPort, bool secure, X509Certificate caCert, X509Certificate clientCert, MqttSslProtocols sslProtocol,
-            RemoteCertificateValidationCallback userCertificateValidationCallback)
-            : this(brokerHostName, brokerPort, secure, caCert, clientCert, sslProtocol, userCertificateValidationCallback, null)
-        {
-        }
-
-        /// <summary>
-        /// Constructor
-        /// </summary>
-        /// <param name="brokerHostName">Broker Host Name or IP Address</param>
-        /// <param name="brokerPort">Broker port</param>
-        /// <param name="secure">Using secure connection</param>
-        /// <param name="sslProtocol">SSL/TLS protocol version</param>
-        /// <param name="userCertificateValidationCallback">A RemoteCertificateValidationCallback delegate responsible for validating the certificate supplied by the remote party</param>
-        /// <param name="userCertificateSelectionCallback">A LocalCertificateSelectionCallback delegate responsible for selecting the certificate used for authentication</param>
-        public MqttClientConnection(string brokerHostName, int brokerPort, bool secure, MqttSslProtocols sslProtocol,
-            RemoteCertificateValidationCallback userCertificateValidationCallback,
-            LocalCertificateSelectionCallback userCertificateSelectionCallback)
-            : this(brokerHostName, brokerPort, secure, null, null, sslProtocol, userCertificateValidationCallback, userCertificateSelectionCallback)
-        {
-        }
-
-        /// <summary>
-        /// Constructor
-        /// </summary>
-        /// <param name="brokerHostName">Broker Host Name or IP Address</param>
-        /// <param name="brokerPort">Broker port</param>
-        /// <param name="secure">Using secure connection</param>
-        /// <param name="caCert">CA certificate for secure connection</param>
-        /// <param name="clientCert">Client certificate</param>
-        /// <param name="sslProtocol">SSL/TLS protocol version</param>
-        /// <param name="userCertificateValidationCallback">A RemoteCertificateValidationCallback delegate responsible for validating the certificate supplied by the remote party</param>
-        /// <param name="userCertificateSelectionCallback">A LocalCertificateSelectionCallback delegate responsible for selecting the certificate used for authentication</param>
-        public MqttClientConnection(string brokerHostName, int brokerPort, bool secure, X509Certificate caCert, X509Certificate clientCert, MqttSslProtocols sslProtocol,
-            RemoteCertificateValidationCallback userCertificateValidationCallback,
-            LocalCertificateSelectionCallback userCertificateSelectionCallback)
-        {
-            this.Init(brokerHostName, brokerPort, secure, caCert, clientCert, sslProtocol, userCertificateValidationCallback, userCertificateSelectionCallback);
+            ReceiveSocketAsyncEventArgs = receiveSocketAsyncEventArgs;
+            ReceiveSocketOffset = receiveSocketAsyncEventArgs.Offset;
+            ReceiveSocketBufferSize = receiveSocketAsyncEventArgs.Count;
+            ReceiveSocketAsyncEventArgs.UserToken = this;
         }
 
         /// <summary>

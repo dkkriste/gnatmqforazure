@@ -1,9 +1,9 @@
-﻿namespace GnatMQForAzure.Managers
+﻿namespace GnatMQForAzure.Handlers
 {
     using System;
     using System.Threading;
 
-    using GnatMQForAzure.Enums;
+    using GnatMQForAzure.Entities.Enums;
     using GnatMQForAzure.Events;
     using GnatMQForAzure.Exceptions;
     using GnatMQForAzure.Messages;

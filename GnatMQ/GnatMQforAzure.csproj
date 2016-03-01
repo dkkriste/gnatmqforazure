@@ -42,7 +42,16 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Entities\BufferManager.cs" />
+    <Compile Include="Entities\MqttOptions.cs" />
+    <Compile Include="Entities\MqttRawMessage.cs" />
+    <Compile Include="Entities\SendSocketArgs.cs" />
+    <Compile Include="Entities\SocketAsyncEventArgsPool.cs" />
+    <Compile Include="Communication\MqttAsyncTcpSender.cs" />
+    <Compile Include="Communication\MqttAsyncTcpSocketListener.cs" />
+    <Compile Include="Communication\MqttAsyncTcpReceiver.cs" />
     <Compile Include="Communication\MqttClientConnectedEventHandler.cs" />
+    <Compile Include="Contracts\IMqttRunnable.cs" />
     <Compile Include="Exceptions\MqttClientErrorCode.cs" />
     <Compile Include="Exceptions\MqttClientException.cs" />
     <Compile Include="Exceptions\MqttCommunicationException.cs" />
@@ -53,14 +62,15 @@
     <Compile Include="Events\InternalEvent.cs" />
     <Compile Include="Events\MsgInternalEvent.cs" />
     <Compile Include="Events\MsgPublishedInternalEvent.cs" />
-    <Compile Include="Managers\MqttClientConnectionInflightManager.cs" />
-    <Compile Include="Managers\MqttClientConnectionInternalEventManager.cs" />
+    <Compile Include="Handlers\MqttClientConnectionInflightManager.cs" />
+    <Compile Include="Handlers\MqttClientConnectionInternalEventManager.cs" />
     <Compile Include="Managers\MqttClientConnectionManager.cs" />
-    <Compile Include="Managers\MqttClientConnectionReceiveManager.cs" />
+    <Compile Include="Handlers\MqttClientConnectionReceiveManager.cs" />
     <Compile Include="Managers\MqttClientConnectionTimeoutManager.cs" />
+    <Compile Include="Managers\MqttRawMessageManager.cs" />
     <Compile Include="Managers\MqttSubscription.cs" />
     <Compile Include="Utility\MqttSubscriptionComparer.cs" />
-    <Compile Include="Delegates\MqttUserAuthenticationDelegate.cs" />
+    <Compile Include="Entities\Delegates\MqttUserAuthenticationDelegate.cs" />
     <Compile Include="Messages\MqttMsgFlow.cs" />
     <Compile Include="Messages\MqttMsgState.cs" />
     <Compile Include="Messages\MqttMsgUnsubscribeEventArgs.cs" />
@@ -86,11 +96,10 @@
     <Compile Include="Messages\MqttMsgUnsuback.cs" />
     <Compile Include="Messages\MqttMsgUnsubscribe.cs" />
     <Compile Include="Messages\MqttMsgUnsubscribedEventArgs.cs" />
-    <Compile Include="MqttClientCollection.cs" />
     <Compile Include="Communication\MqttClientConnectedEventArgs.cs" />
     <Compile Include="MqttClientConnection.cs" />
-    <Compile Include="Enums\MqttProtocolVersion.cs" />
-    <Compile Include="Enums\MqttSslProtocols.cs" />
+    <Compile Include="Entities\Enums\MqttProtocolVersion.cs" />
+    <Compile Include="Entities\Enums\MqttSslProtocols.cs" />
     <Compile Include="Utility\IPAddressUtility.cs" />
     <Compile Include="Utility\MqttSslUtility.cs" />
     <Compile Include="Communication\MqttTcpCommunicationLayer.cs" />

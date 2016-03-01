@@ -1,4 +1,4 @@
-namespace GnatMQForAzure.Enums
+namespace GnatMQForAzure.Entities.Enums
 {
     using GnatMQForAzure.Messages;
 

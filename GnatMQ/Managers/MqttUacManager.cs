@@ -17,7 +17,7 @@ Contributors:
 
 namespace GnatMQForAzure.Managers
 {
-    using GnatMQForAzure.Delegates;
+    using GnatMQForAzure.Entities.Delegates;
 
     /// <summary>
     /// Manager for User Access Control

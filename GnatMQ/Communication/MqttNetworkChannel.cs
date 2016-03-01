@@ -25,7 +25,7 @@ namespace GnatMQForAzure.Communication
     using System.Security.Cryptography.X509Certificates;
 
     using GnatMQForAzure.Contracts;
-    using GnatMQForAzure.Enums;
+    using GnatMQForAzure.Entities.Enums;
     using GnatMQForAzure.Utility;
 
     /// <summary>
