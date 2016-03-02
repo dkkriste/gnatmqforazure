@@ -9,6 +9,8 @@
             PayloadBuffer = new byte[messageBufferSize];
         }
 
+        public MqttClientConnection ClientConnection { get; set; }
+
         public byte MessageType { get; set; }
 
         public int PayloadLength { get; set; }

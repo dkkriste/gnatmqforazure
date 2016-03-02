@@ -22,7 +22,7 @@
             }
         }
 
-        public MqttRawMessage GetRawMessageWithData(byte messageType, byte[] buffer, int bufferOffset, int payloadLength)
+        public MqttRawMessage GetRawMessageWithData(MqttClientConnection clientConnection, byte messageType, byte[] buffer, int bufferOffset, int payloadLength)
         {
             MqttRawMessage rawMessage;
             if (!rawMessageBuffer.TryPop(out rawMessage))
@@ -30,6 +30,7 @@
                 rawMessage = new MqttRawMessage(individualMessageBufferSize);
             }
 
+            rawMessage.ClientConnection = clientConnection;
             rawMessage.MessageType = messageType;
             rawMessage.PayloadLength = payloadLength;
             Buffer.BlockCopy(buffer, bufferOffset, rawMessage.PayloadBuffer, 0, payloadLength);

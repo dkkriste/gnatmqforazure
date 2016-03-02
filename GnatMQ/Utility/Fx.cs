@@ -28,10 +28,5 @@ namespace GnatMQForAzure.Utility
         {
             new Thread(threadStart).Start();
         }
-
-        public static void SleepThread(int millisecondsTimeout)
-        {
-            Thread.Sleep(millisecondsTimeout);
-        }
     }
 }

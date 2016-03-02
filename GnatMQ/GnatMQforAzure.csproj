@@ -42,6 +42,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Contracts\ILogger.cs" />
     <Compile Include="Entities\BufferManager.cs" />
     <Compile Include="Entities\MqttOptions.cs" />
     <Compile Include="Entities\MqttRawMessage.cs" />
@@ -64,6 +65,7 @@
     <Compile Include="Events\MsgPublishedInternalEvent.cs" />
     <Compile Include="Handlers\MqttClientConnectionInflightManager.cs" />
     <Compile Include="Handlers\MqttClientConnectionInternalEventManager.cs" />
+    <Compile Include="Managers\MqttClienConnectionProcessingManager.cs" />
     <Compile Include="Managers\MqttClientConnectionManager.cs" />
     <Compile Include="Handlers\MqttClientConnectionReceiveManager.cs" />
     <Compile Include="Managers\MqttClientConnectionTimeoutManager.cs" />

@@ -71,11 +71,11 @@
             //TODO signal close
         }
 
-        private void TryProcessMessage(MqttClientConnection connection, SocketAsyncEventArgs receiveSendEventArgs)
+        private void TryProcessMessage(MqttClientConnection clientConnection, SocketAsyncEventArgs receiveSendEventArgs)
         {
             int lastProcessedByteByCompleteMessage = -1;
-            int remainingBytesToProcess = connection.PreviouslyRead + receiveSendEventArgs.BytesTransferred;
-            var bufferOffset = connection.ReceiveSocketOffset;
+            int remainingBytesToProcess = clientConnection.PreviouslyRead + receiveSendEventArgs.BytesTransferred;
+            var bufferOffset = clientConnection.ReceiveSocketOffset;
 
             while (remainingBytesToProcess > 0)
             {
@@ -85,7 +85,7 @@
                     var payloadLength = GetPayloadLength(receiveSendEventArgs.Buffer, ref bufferOffset, ref remainingBytesToProcess);
                     if (payloadLength <= remainingBytesToProcess)
                     {
-                        var rawMessage = rawMessageManager.GetRawMessageWithData(messageType, receiveSendEventArgs.Buffer, bufferOffset, payloadLength);
+                        var rawMessage = rawMessageManager.GetRawMessageWithData(clientConnection, messageType, receiveSendEventArgs.Buffer, bufferOffset, payloadLength);
 
                         // TODO enqueue raw message
                         bufferOffset += payloadLength;
@@ -100,19 +100,19 @@
                 catch (AggregateException)
                 {
                     var unprocessedStart = lastProcessedByteByCompleteMessage + 1;
-                    var totalUnprocessedBytes = (connection.ReceiveSocketOffset + connection.PreviouslyRead + receiveSendEventArgs.BytesTransferred) - unprocessedStart;
+                    var totalUnprocessedBytes = (clientConnection.ReceiveSocketOffset + clientConnection.PreviouslyRead + receiveSendEventArgs.BytesTransferred) - unprocessedStart;
                     if (lastProcessedByteByCompleteMessage > 0)
                     {
-                        Buffer.BlockCopy(receiveSendEventArgs.Buffer, connection.ReceiveSocketOffset + unprocessedStart, receiveSendEventArgs.Buffer, connection.ReceiveSocketOffset, totalUnprocessedBytes);
+                        Buffer.BlockCopy(receiveSendEventArgs.Buffer, clientConnection.ReceiveSocketOffset + unprocessedStart, receiveSendEventArgs.Buffer, clientConnection.ReceiveSocketOffset, totalUnprocessedBytes);
                     }
 
-                    receiveSendEventArgs.SetBuffer(connection.ReceiveSocketOffset + totalUnprocessedBytes, connection.ReceiveSocketBufferSize - totalUnprocessedBytes);
-                    connection.PreviouslyRead = totalUnprocessedBytes;
+                    receiveSendEventArgs.SetBuffer(clientConnection.ReceiveSocketOffset + totalUnprocessedBytes, clientConnection.ReceiveSocketBufferSize - totalUnprocessedBytes);
+                    clientConnection.PreviouslyRead = totalUnprocessedBytes;
                     return;
                 }
             }
 
-            receiveSendEventArgs.SetBuffer(connection.ReceiveSocketOffset, connection.ReceiveSocketBufferSize);
+            receiveSendEventArgs.SetBuffer(clientConnection.ReceiveSocketOffset, clientConnection.ReceiveSocketBufferSize);
         }
 
         private byte GetMessageType(byte[] buffer, ref int offset, ref int remainingBytesToProcess)

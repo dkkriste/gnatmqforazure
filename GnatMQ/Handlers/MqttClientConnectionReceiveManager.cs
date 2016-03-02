@@ -4,6 +4,7 @@
     using System.IO;
     using System.Net.Sockets;
 
+    using GnatMQForAzure.Entities;
     using GnatMQForAzure.Events;
     using GnatMQForAzure.Exceptions;
     using GnatMQForAzure.Messages;
@@ -14,195 +15,85 @@
         /// <summary>
         /// Thread for receiving messages
         /// </summary>
-        private void ReceiveThread(MqttClientConnection clientConnection)
+        private void ReceiveThread(MqttRawMessage rawMessage)
         {
-            int readBytes = 0;
-            byte[] fixedHeaderFirstByte = new byte[1];
-            byte msgType;
-
-            while (clientConnection.isRunning)
+            if (!rawMessage.ClientConnection.isRunning)
             {
-                try
-                {
-                    // read first byte (fixed header)
-                    readBytes = clientConnection.channel.Receive(fixedHeaderFirstByte);
+                return;
+            }
 
-                    if (readBytes > 0)
-                    {
-                        // update last message received ticks
-                        clientConnection.lastCommTime = Environment.TickCount;
+            // update last message received ticks
+            rawMessage.ClientConnection.lastCommTime = Environment.TickCount;
+            
+            // extract message type from received byte
+            byte msgType = (byte)((rawMessage.MessageType & MqttMsgBase.MSG_TYPE_MASK) >> MqttMsgBase.MSG_TYPE_OFFSET);
+            byte protocolVersion = (byte)rawMessage.ClientConnection.ProtocolVersion;
+            switch (msgType)
+            {
+                case MqttMsgBase.MQTT_MSG_CONNECT_TYPE:
+                    MqttMsgConnect connect = MqttMsgConnect.Parse(rawMessage.MessageType, protocolVersion, rawMessage.PayloadBuffer);
+                    rawMessage.ClientConnection.OnInternalEvent(new MsgInternalEvent(connect));
+                    break;
 
-                        // extract message type from received byte
-                        msgType = (byte)((fixedHeaderFirstByte[0] & MqttMsgBase.MSG_TYPE_MASK) >> MqttMsgBase.MSG_TYPE_OFFSET);
+                case MqttMsgBase.MQTT_MSG_PINGREQ_TYPE:
+                    var pingReqest = MqttMsgPingReq.Parse(rawMessage.MessageType, protocolVersion, rawMessage.PayloadBuffer);
+                    MqttMsgPingResp pingresp = new MqttMsgPingResp();
+                    rawMessage.ClientConnection.Send(pingresp);
 
-                        switch (msgType)
-                        {
-                            // CONNECT message received
-                            case MqttMsgBase.MQTT_MSG_CONNECT_TYPE:
+                    break;
 
-                                MqttMsgConnect connect = MqttMsgConnect.Parse(fixedHeaderFirstByte[0], (byte)clientConnection.ProtocolVersion, clientConnection.channel);
-                                // raise message received event
-                                clientConnection.OnInternalEvent(new MsgInternalEvent(connect));
-                                break;
+                case MqttMsgBase.MQTT_MSG_SUBSCRIBE_TYPE:
+                    MqttMsgSubscribe subscribe = MqttMsgSubscribe.Parse(rawMessage.MessageType, protocolVersion, rawMessage.PayloadBuffer);
+                    rawMessage.ClientConnection.OnInternalEvent(new MsgInternalEvent(subscribe));
+                    break;
 
-                            // CONNACK message received
-                            case MqttMsgBase.MQTT_MSG_CONNACK_TYPE:
-                                throw new MqttClientException(MqttClientErrorCode.WrongBrokerMessage);
+                case MqttMsgBase.MQTT_MSG_PUBLISH_TYPE:
+                    MqttMsgPublish publish = MqttMsgPublish.Parse(rawMessage.MessageType, protocolVersion, rawMessage.PayloadBuffer);
+                    EnqueueInflight(rawMessage.ClientConnection, publish, MqttMsgFlow.ToAcknowledge);
+                    break;
 
-                            // PINGREQ message received
-                            case MqttMsgBase.MQTT_MSG_PINGREQ_TYPE:
+                case MqttMsgBase.MQTT_MSG_PUBACK_TYPE:
+                    // enqueue PUBACK message received (for QoS Level 1) into the internal queue
+                    MqttMsgPuback puback = MqttMsgPuback.Parse(rawMessage.MessageType, protocolVersion, rawMessage.PayloadBuffer);
+                    EnqueueInternal(rawMessage.ClientConnection, puback);
+                    break;
 
-                                clientConnection.msgReceived = MqttMsgPingReq.Parse(fixedHeaderFirstByte[0], (byte)clientConnection.ProtocolVersion, clientConnection.channel);
+                case MqttMsgBase.MQTT_MSG_PUBREC_TYPE:
+                    // enqueue PUBREC message received (for QoS Level 2) into the internal queue
+                    MqttMsgPubrec pubrec = MqttMsgPubrec.Parse(rawMessage.MessageType, protocolVersion, rawMessage.PayloadBuffer);
+                    EnqueueInternal(rawMessage.ClientConnection, pubrec);
+                    break;
 
-                                MqttMsgPingResp pingresp = new MqttMsgPingResp();
-                                clientConnection.Send(pingresp);
+                case MqttMsgBase.MQTT_MSG_PUBREL_TYPE:
+                    // enqueue PUBREL message received (for QoS Level 2) into the internal queue
+                    MqttMsgPubrel pubrel = MqttMsgPubrel.Parse(rawMessage.MessageType, protocolVersion, rawMessage.PayloadBuffer);
+                    EnqueueInternal(rawMessage.ClientConnection, pubrel);
+                    break;
 
-                                break;
+                case MqttMsgBase.MQTT_MSG_PUBCOMP_TYPE:
+                    // enqueue PUBCOMP message received (for QoS Level 2) into the internal queue
+                    MqttMsgPubcomp pubcomp = MqttMsgPubcomp.Parse(rawMessage.MessageType, protocolVersion, rawMessage.PayloadBuffer);
+                    EnqueueInternal(rawMessage.ClientConnection, pubcomp);
+                    break;
 
+                case MqttMsgBase.MQTT_MSG_UNSUBSCRIBE_TYPE:
+                    MqttMsgUnsubscribe unsubscribe = MqttMsgUnsubscribe.Parse(rawMessage.MessageType, protocolVersion, rawMessage.PayloadBuffer);
+                    rawMessage.ClientConnection.OnInternalEvent(new MsgInternalEvent(unsubscribe));
+                    break;
 
-                            // PINGRESP message received
-                            case MqttMsgBase.MQTT_MSG_PINGRESP_TYPE:
+                case MqttMsgBase.MQTT_MSG_DISCONNECT_TYPE:
+                    MqttMsgDisconnect disconnect = MqttMsgDisconnect.Parse(rawMessage.MessageType, protocolVersion, rawMessage.PayloadBuffer);
+                    rawMessage.ClientConnection.OnInternalEvent(new MsgInternalEvent(disconnect));
+                    break;
 
-                                throw new MqttClientException(MqttClientErrorCode.WrongBrokerMessage);
+                case MqttMsgBase.MQTT_MSG_CONNACK_TYPE:
+                case MqttMsgBase.MQTT_MSG_PINGRESP_TYPE:
+                case MqttMsgBase.MQTT_MSG_SUBACK_TYPE:
+                case MqttMsgBase.MQTT_MSG_UNSUBACK_TYPE:
+                    throw new MqttClientException(MqttClientErrorCode.WrongBrokerMessage);
 
-
-                            // SUBSCRIBE message received
-                            case MqttMsgBase.MQTT_MSG_SUBSCRIBE_TYPE:
-
-                                MqttMsgSubscribe subscribe = MqttMsgSubscribe.Parse(fixedHeaderFirstByte[0], (byte)clientConnection.ProtocolVersion, clientConnection.channel);
-
-
-                                // raise message received event
-                                clientConnection.OnInternalEvent(new MsgInternalEvent(subscribe));
-
-                                break;
-
-
-                            // SUBACK message received
-                            case MqttMsgBase.MQTT_MSG_SUBACK_TYPE:
-
-                                throw new MqttClientException(MqttClientErrorCode.WrongBrokerMessage);
-
-
-                            // PUBLISH message received
-                            case MqttMsgBase.MQTT_MSG_PUBLISH_TYPE:
-
-                                MqttMsgPublish publish = MqttMsgPublish.Parse(fixedHeaderFirstByte[0], (byte)clientConnection.ProtocolVersion, clientConnection.channel);
-
-
-                                // enqueue PUBLISH message to acknowledge into the inflight queue
-                                EnqueueInflight(clientConnection, publish, MqttMsgFlow.ToAcknowledge);
-
-                                break;
-
-                            // PUBACK message received
-                            case MqttMsgBase.MQTT_MSG_PUBACK_TYPE:
-
-                                // enqueue PUBACK message received (for QoS Level 1) into the internal queue
-                                MqttMsgPuback puback = MqttMsgPuback.Parse(fixedHeaderFirstByte[0], (byte)clientConnection.ProtocolVersion, clientConnection.channel);
-                                // enqueue PUBACK message into the internal queue
-                                EnqueueInternal(clientConnection, puback);
-
-                                break;
-
-                            // PUBREC message received
-                            case MqttMsgBase.MQTT_MSG_PUBREC_TYPE:
-
-                                // enqueue PUBREC message received (for QoS Level 2) into the internal queue
-                                MqttMsgPubrec pubrec = MqttMsgPubrec.Parse(fixedHeaderFirstByte[0], (byte)clientConnection.ProtocolVersion, clientConnection.channel);
-                                // enqueue PUBREC message into the internal queue
-                                EnqueueInternal(clientConnection, pubrec);
-
-                                break;
-
-                            // PUBREL message received
-                            case MqttMsgBase.MQTT_MSG_PUBREL_TYPE:
-
-                                // enqueue PUBREL message received (for QoS Level 2) into the internal queue
-                                MqttMsgPubrel pubrel = MqttMsgPubrel.Parse(fixedHeaderFirstByte[0], (byte)clientConnection.ProtocolVersion, clientConnection.channel);
-
-                                // enqueue PUBREL message into the internal queue
-                                EnqueueInternal(clientConnection, pubrel);
-
-                                break;
-
-                            // PUBCOMP message received
-                            case MqttMsgBase.MQTT_MSG_PUBCOMP_TYPE:
-
-                                // enqueue PUBCOMP message received (for QoS Level 2) into the internal queue
-                                MqttMsgPubcomp pubcomp = MqttMsgPubcomp.Parse(fixedHeaderFirstByte[0], (byte)clientConnection.ProtocolVersion, clientConnection.channel);
-
-                                // enqueue PUBCOMP message into the internal queue
-                                EnqueueInternal(clientConnection, pubcomp);
-
-                                break;
-
-                            // UNSUBSCRIBE message received
-                            case MqttMsgBase.MQTT_MSG_UNSUBSCRIBE_TYPE:
-
-                                MqttMsgUnsubscribe unsubscribe = MqttMsgUnsubscribe.Parse(fixedHeaderFirstByte[0], (byte)clientConnection.ProtocolVersion, clientConnection.channel);
-
-                                // raise message received event
-                                clientConnection.OnInternalEvent(new MsgInternalEvent(unsubscribe));
-
-                                break;
-
-
-                            // UNSUBACK message received
-                            case MqttMsgBase.MQTT_MSG_UNSUBACK_TYPE:
-                                throw new MqttClientException(MqttClientErrorCode.WrongBrokerMessage);
-
-
-                            // DISCONNECT message received
-                            case MqttMsgDisconnect.MQTT_MSG_DISCONNECT_TYPE:
-
-                                MqttMsgDisconnect disconnect = MqttMsgDisconnect.Parse(fixedHeaderFirstByte[0], (byte)clientConnection.ProtocolVersion, clientConnection.channel);
-
-
-                                // raise message received event
-                                clientConnection.OnInternalEvent(new MsgInternalEvent(disconnect));
-
-                                break;
-
-                            default:
-
-                                throw new MqttClientException(MqttClientErrorCode.WrongBrokerMessage);
-                        }
-
-                        clientConnection.exReceiving = null;
-                    }
-                    // zero bytes read, peer gracefully closed socket
-                    else
-                    {
-                        // wake up thread that will notify connection is closing
-                        clientConnection.OnConnectionClosing();
-                    }
-                }
-                catch (Exception e)
-                {
-                    clientConnection.exReceiving = new MqttCommunicationException(e);
-
-                    bool close = false;
-                    if (e.GetType() == typeof(MqttClientException))
-                    {
-                        // [v3.1.1] scenarios the receiver MUST close the network connection
-                        MqttClientException ex = e as MqttClientException;
-                        close = ((ex.ErrorCode == MqttClientErrorCode.InvalidFlagBits) ||
-                                (ex.ErrorCode == MqttClientErrorCode.InvalidProtocolName) ||
-                                (ex.ErrorCode == MqttClientErrorCode.InvalidConnectFlags));
-                    }
-                    else if ((e.GetType() == typeof(IOException)) || (e.GetType() == typeof(SocketException)) ||
-                             ((e.InnerException != null) && (e.InnerException.GetType() == typeof(SocketException)))) // added for SSL/TLS incoming connection that use SslStream that wraps SocketException
-                    {
-                        close = true;
-                    }
-
-                    if (close)
-                    {
-                        // wake up thread that will notify connection is closing
-                        clientConnection.OnConnectionClosing();
-                    }
-                }
+                default:
+                    throw new MqttClientException(MqttClientErrorCode.WrongBrokerMessage);
             }
         }
 
@@ -387,14 +278,14 @@
                 {
                     // if it is a PUBREC but the corresponding PUBLISH isn't in the inflight queue,
                     // it means that we sent PUBLISH message more times (retries) but broker didn't send PUBREC in time
-                    // the publish is failed and we need only to ignore clientConnection PUBREC.
+                    // the publish is failed and we need only to ignore rawMessage.ClientConnection PUBREC.
 
                     // NOTE : I need to find on message id and flow because the broker could be publish/received
                     //        to/from client and message id could be the same (one tracked by broker and the other by client)
                     MqttClientConnection.MqttMsgContextFinder msgCtxFinder = new MqttClientConnection.MqttMsgContextFinder(msg.MessageId, MqttMsgFlow.ToPublish);
                     MqttMsgContext msgCtx = (MqttMsgContext)clientConnection.inflightQueue.Get(msgCtxFinder.Find);
 
-                    // the PUBLISH message isn't in the inflight queue, it was already sent so we need to ignore clientConnection PUBREC
+                    // the PUBLISH message isn't in the inflight queue, it was already sent so we need to ignore rawMessage.ClientConnection PUBREC
                     if (msgCtx == null)
                     {
                         enqueue = false;

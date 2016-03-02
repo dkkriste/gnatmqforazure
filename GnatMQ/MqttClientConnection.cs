@@ -19,6 +19,7 @@ namespace GnatMQForAzure
 {
     using System;
     using System.Collections;
+    using System.Collections.Concurrent;
     using System.IO;
     using System.Net;
     using System.Net.Security;
@@ -42,12 +43,9 @@ namespace GnatMQForAzure
     {
         #region Fields
 
-        // broker hostname (or ip address) and port
-        public string brokerHostName;
-        public int brokerPort;
-
         // running status of threads
         public bool isRunning;
+
         // event for raising received message event
         public AutoResetEvent receiveEventWaitHandle;
 
@@ -56,6 +54,7 @@ namespace GnatMQForAzure
 
         // event for signaling synchronous receive
         public AutoResetEvent syncEndReceiving;
+        
         // message received
         public MqttMsgBase msgReceived;
 
@@ -64,9 +63,12 @@ namespace GnatMQForAzure
 
         // keep alive period (in ms)
         public int keepAlivePeriod;
+        
         // events for signaling on keep alive thread
         public AutoResetEvent keepAliveEvent;
+
         public AutoResetEvent keepAliveEventEnd;
+        
         // last communication time in ticks
         public int lastCommTime;
 
@@ -74,11 +76,13 @@ namespace GnatMQForAzure
         public IMqttNetworkChannel channel;
 
         // inflight messages queue
-        public Queue inflightQueue;
+        public ConcurrentQueue<MqttMsgContext> inflightQueue;
+        
         // internal queue for received messages about inflight messages
-        public Queue internalQueue;
+        public ConcurrentQueue<MqttMsgBase> internalQueue;
+        
         // internal queue for dispatching events
-        public Queue eventQueue;
+        public ConcurrentQueue<InternalEvent> eventQueue;
         // session
 
         // current message identifier generated
@@ -130,12 +134,12 @@ namespace GnatMQForAzure
 
             // queue for handling inflight messages (publishing and acknowledge)
             this.inflightWaitHandle = new AutoResetEvent(false);
-            this.inflightQueue = new Queue();
+            this.inflightQueue = new ConcurrentQueue<MqttMsgContext>();
 
             // queue for received message
             this.receiveEventWaitHandle = new AutoResetEvent(false);
-            this.eventQueue = new Queue();
-            this.internalQueue = new Queue();
+            this.eventQueue = new ConcurrentQueue<InternalEvent>();
+            this.internalQueue = new ConcurrentQueue<MqttMsgBase>();
 
             // session
             this.Session = null;
@@ -284,43 +288,6 @@ namespace GnatMQForAzure
         /// <param name="sslProtocol">SSL/TLS protocol version</param>
         /// <param name="userCertificateSelectionCallback">A RemoteCertificateValidationCallback delegate responsible for validating the certificate supplied by the remote party</param>
         /// <param name="userCertificateValidationCallback">A LocalCertificateSelectionCallback delegate responsible for selecting the certificate used for authentication</param>
-        private void Init(string brokerHostName, int brokerPort, bool secure, X509Certificate caCert, X509Certificate clientCert, MqttSslProtocols sslProtocol,
-            RemoteCertificateValidationCallback userCertificateValidationCallback,
-            LocalCertificateSelectionCallback userCertificateSelectionCallback)
-        {
-            // set default MQTT protocol version (default is 3.1.1)
-            this.ProtocolVersion = MqttProtocolVersion.Version_3_1_1;
-
-            this.brokerHostName = brokerHostName;
-            this.brokerPort = brokerPort;
-
-            // reference to MQTT settings
-            this.Settings = MqttSettings.Instance;
-            // set settings port based on secure connection or not
-            if (!secure)
-                this.Settings.Port = this.brokerPort;
-            else
-                this.Settings.SslPort = this.brokerPort;
-
-            this.syncEndReceiving = new AutoResetEvent(false);
-            this.keepAliveEvent = new AutoResetEvent(false);
-
-            // queue for handling inflight messages (publishing and acknowledge)
-            this.inflightWaitHandle = new AutoResetEvent(false);
-            this.inflightQueue = new Queue();
-
-            // queue for received message
-            this.receiveEventWaitHandle = new AutoResetEvent(false);
-            this.eventQueue = new Queue();
-            this.internalQueue = new Queue();
-
-            // session
-            this.Session = null;
-
-            // create network channel
-            this.channel = new MqttNetworkChannel(this.brokerHostName, this.brokerPort, secure, caCert, clientCert, sslProtocol, userCertificateValidationCallback, userCertificateSelectionCallback);
-        }
-
 
         /// <summary>
         /// Open client communication
@@ -624,10 +591,6 @@ namespace GnatMQForAzure
         {
             this.Send(msg.GetBytes((byte)this.ProtocolVersion));
         }
-
-
-
-        
 
         /// <summary>
         /// Restore session
