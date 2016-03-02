@@ -80,16 +80,9 @@ namespace GnatMQForAzure.Messages
             this.qosLevel = QOS_LEVEL_AT_LEAST_ONCE;
         }
 
-        /// <summary>
-        /// Parse bytes for a SUBSCRIBE message
-        /// </summary>
-        /// <param name="fixedHeaderFirstByte">First fixed header byte</param>
-        /// <param name="protocolVersion">Protocol Version</param>
-        /// <param name="channel">Channel connected to the broker</param>
-        /// <returns>SUBSCRIBE message instance</returns>
-        public static MqttMsgSubscribe Parse(byte fixedHeaderFirstByte, byte protocolVersion, IMqttNetworkChannel channel)
+        public static MqttMsgSubscribe Parse(byte fixedHeaderFirstByte, byte protocolVersion, byte[] buffer)
         {
-            byte[] buffer;
+            
             int index = 0;
             byte[] topicUtf8;
             int topicUtf8Length;
@@ -103,11 +96,7 @@ namespace GnatMQForAzure.Messages
             }
 
             // get remaining length and allocate buffer
-            int remainingLength = MqttMsgBase.decodeRemainingLength(channel);
-            buffer = new byte[remainingLength];
-
-            // read bytes from socket...
-            int received = channel.Receive(buffer);
+            int remainingLength = buffer.Length;
 
             if (protocolVersion == MqttMsgConnect.PROTOCOL_VERSION_V3_1)
             {

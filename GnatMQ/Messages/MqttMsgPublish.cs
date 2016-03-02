@@ -190,27 +190,18 @@ namespace GnatMQForAzure.Messages
             return buffer;
         }
 
-        /// <summary>
-        /// Parse bytes for a PUBLISH message
-        /// </summary>
-        /// <param name="fixedHeaderFirstByte">First fixed header byte</param>
-        /// <param name="protocolVersion">Protocol Version</param>
-        /// <param name="channel">Channel connected to the broker</param>
-        /// <returns>PUBLISH message instance</returns>
-        public static MqttMsgPublish Parse(byte fixedHeaderFirstByte, byte protocolVersion, IMqttNetworkChannel channel)
+        public static MqttMsgPublish Parse(byte fixedHeaderFirstByte, byte protocolVersion, byte[] buffer)
         {
-            byte[] buffer;
             int index = 0;
             byte[] topicUtf8;
             int topicUtf8Length;
             MqttMsgPublish msg = new MqttMsgPublish();
 
             // get remaining length and allocate buffer
-            int remainingLength = MqttMsgBase.decodeRemainingLength(channel);
-            buffer = new byte[remainingLength];
+            int remainingLength = buffer.Length; 
 
             // read bytes from socket...
-            int received = channel.Receive(buffer);
+            int received = buffer.Length;
 
             // topic name
             topicUtf8Length = ((buffer[index++] << 8) & 0xFF00);
@@ -245,22 +236,8 @@ namespace GnatMQForAzure.Messages
             int messageOffset = 0;
             msg.message = new byte[messageSize];
 
-            // BUG FIX 26/07/2013 : receiving large payload
-
             // copy first part of payload data received
             Array.Copy(buffer, index, msg.message, messageOffset, received - index);
-            remaining -= (received - index);
-            messageOffset += (received - index);
-
-            // if payload isn't finished
-            while (remaining > 0)
-            {
-                // receive other payload data
-                received = channel.Receive(buffer);
-                Array.Copy(buffer, 0, msg.message, messageOffset, received);
-                remaining -= received;
-                messageOffset += received;
-            }
 
             return msg;
         }

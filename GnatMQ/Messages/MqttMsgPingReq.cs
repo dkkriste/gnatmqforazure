@@ -48,14 +48,7 @@ namespace GnatMQForAzure.Messages
             return buffer;
         }
 
-        /// <summary>
-        /// Parse bytes for a PINGREQ message
-        /// </summary>
-        /// <param name="fixedHeaderFirstByte">First fixed header byte</param>
-        /// <param name="protocolVersion">Protocol Version</param>
-        /// <param name="channel">Channel connected to the broker</param>
-        /// <returns>PINGREQ message instance</returns>
-        public static MqttMsgPingReq Parse(byte fixedHeaderFirstByte, byte protocolVersion, IMqttNetworkChannel channel)
+        public static MqttMsgPingReq Parse(byte fixedHeaderFirstByte, byte protocolVersion)
         {
             MqttMsgPingReq msg = new MqttMsgPingReq();
 
@@ -63,12 +56,10 @@ namespace GnatMQForAzure.Messages
             {
                 // [v3.1.1] check flag bits
                 if ((fixedHeaderFirstByte & MSG_FLAG_BITS_MASK) != MQTT_MSG_PINGREQ_FLAG_BITS)
+                {
                     throw new MqttClientException(MqttClientErrorCode.InvalidFlagBits);
+                }
             }
-
-            // already know remaininglength is zero (MQTT specification),
-            // so it isn't necessary to read other data from socket
-            int remainingLength = MqttMsgBase.decodeRemainingLength(channel);
 
             return msg;
         }

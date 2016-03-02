@@ -7,7 +7,7 @@
     using GnatMQForAzure.Entities;
     using GnatMQForAzure.Utility;
 
-    public class MqttClienConnectionProcessingManager : IMqttRunnable
+    public class MqttClientConnectionProcessingManager : IMqttRunnable
     {
         private readonly ILogger logger;
 
@@ -19,7 +19,7 @@
 
         private bool isRunning;
 
-        public MqttClienConnectionProcessingManager(ILogger logger)
+        public MqttClientConnectionProcessingManager(ILogger logger)
         {
             this.logger = logger;
             rawMessageQueue = new BlockingCollection<MqttRawMessage>();
@@ -38,6 +38,21 @@
         public void Stop()
         {
             isRunning = false;
+        }
+
+        public void EnqueueRawMessageForProcessing(MqttRawMessage rawMessage)
+        {
+            rawMessageQueue.Add(rawMessage);
+        }
+
+        public void EnqueueClientConnectionWithInternalEventQueueToProcess(MqttClientConnection clientConnection)
+        {
+            clientConnectionsWithInternalEventQueuesToProcess.Add(clientConnection);
+        }
+
+        public void EnqueueClientConnectionWithInflightQueueToProcess(MqttClientConnection clientConnection)
+        {
+            clientConnectionsWithInflightQueuesToProcess.Add(clientConnection);
         }
 
         private void ProcessRawMessageQueue()

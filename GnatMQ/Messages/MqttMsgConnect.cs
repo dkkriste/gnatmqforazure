@@ -254,8 +254,7 @@ namespace GnatMQForAzure.Messages
             string willMessage,
             bool cleanSession,
             ushort keepAlivePeriod,
-            byte protocolVersion
-            )
+            byte protocolVersion)
         {
             this.type = MQTT_MSG_CONNECT_TYPE;
 
@@ -274,16 +273,8 @@ namespace GnatMQForAzure.Messages
             this.protocolName = (this.protocolVersion == PROTOCOL_VERSION_V3_1_1) ? PROTOCOL_NAME_V3_1_1 : PROTOCOL_NAME_V3_1;
         }
 
-        /// <summary>
-        /// Parse bytes for a CONNECT message
-        /// </summary>
-        /// <param name="fixedHeaderFirstByte">First fixed header byte</param>
-        /// <param name="protocolVersion">Protocol Version</param>
-        /// <param name="channel">Channel connected to the broker</param>
-        /// <returns>CONNECT message instance</returns>
-        public static MqttMsgConnect Parse(byte fixedHeaderFirstByte, byte protocolVersion, IMqttNetworkChannel channel)
+        public static MqttMsgConnect Parse(byte fixedHeaderFirstByte, byte protocolVersion, byte[] buffer)
         {
-            byte[] buffer;
             int index = 0;
             int protNameUtf8Length;
             byte[] protNameUtf8;
@@ -301,20 +292,13 @@ namespace GnatMQForAzure.Messages
             byte[] passwordUtf8;
             MqttMsgConnect msg = new MqttMsgConnect();
             
-            // get remaining length and allocate buffer
-            int remainingLength = MqttMsgBase.decodeRemainingLength(channel);
-            buffer = new byte[remainingLength];
-
-            // read bytes from socket...
-            channel.Receive(buffer);
-
             // protocol name
             protNameUtf8Length = ((buffer[index++] << 8) & 0xFF00);
             protNameUtf8Length |= buffer[index++];
             protNameUtf8 = new byte[protNameUtf8Length];
             Array.Copy(buffer, index, protNameUtf8, 0, protNameUtf8Length);
             index += protNameUtf8Length;
-            msg.protocolName = new String(Encoding.UTF8.GetChars(protNameUtf8));
+            msg.protocolName = new string(Encoding.UTF8.GetChars(protNameUtf8));
 
             // [v3.1.1] wrong protocol name
             if (!msg.protocolName.Equals(PROTOCOL_NAME_V3_1) && !msg.protocolName.Equals(PROTOCOL_NAME_V3_1_1))
@@ -348,7 +332,7 @@ namespace GnatMQForAzure.Messages
             clientIdUtf8 = new byte[clientIdUtf8Length];
             Array.Copy(buffer, index, clientIdUtf8, 0, clientIdUtf8Length);
             index += clientIdUtf8Length;
-            msg.clientId = new String(Encoding.UTF8.GetChars(clientIdUtf8));
+            msg.clientId = new string(Encoding.UTF8.GetChars(clientIdUtf8));
             // [v3.1.1] if client identifier is zero bytes long, clean session must be true
             if ((msg.protocolVersion == PROTOCOL_VERSION_V3_1_1) && (clientIdUtf8Length == 0) && (!msg.cleanSession))
                 throw new MqttClientException(MqttClientErrorCode.InvalidClientId);
@@ -361,14 +345,14 @@ namespace GnatMQForAzure.Messages
                 willTopicUtf8 = new byte[willTopicUtf8Length];
                 Array.Copy(buffer, index, willTopicUtf8, 0, willTopicUtf8Length);
                 index += willTopicUtf8Length;
-                msg.willTopic = new String(Encoding.UTF8.GetChars(willTopicUtf8));
+                msg.willTopic = new string(Encoding.UTF8.GetChars(willTopicUtf8));
 
                 willMessageUtf8Length = ((buffer[index++] << 8) & 0xFF00);
                 willMessageUtf8Length |= buffer[index++];
                 willMessageUtf8 = new byte[willMessageUtf8Length];
                 Array.Copy(buffer, index, willMessageUtf8, 0, willMessageUtf8Length);
                 index += willMessageUtf8Length;
-                msg.willMessage = new String(Encoding.UTF8.GetChars(willMessageUtf8));
+                msg.willMessage = new string(Encoding.UTF8.GetChars(willMessageUtf8));
             }
 
             // username
@@ -379,7 +363,7 @@ namespace GnatMQForAzure.Messages
                 usernameUtf8 = new byte[usernameUtf8Length];
                 Array.Copy(buffer, index, usernameUtf8, 0, usernameUtf8Length);
                 index += usernameUtf8Length;
-                msg.username = new String(Encoding.UTF8.GetChars(usernameUtf8));
+                msg.username = new string(Encoding.UTF8.GetChars(usernameUtf8));
             }
 
             // password
@@ -390,7 +374,7 @@ namespace GnatMQForAzure.Messages
                 passwordUtf8 = new byte[passwordUtf8Length];
                 Array.Copy(buffer, index, passwordUtf8, 0, passwordUtf8Length);
                 index += passwordUtf8Length;
-                msg.password = new String(Encoding.UTF8.GetChars(passwordUtf8));
+                msg.password = new string(Encoding.UTF8.GetChars(passwordUtf8));
             }
 
             return msg;

@@ -29,9 +29,11 @@ namespace GnatMQForAzure
 
     using GnatMQForAzure.Communication;
     using GnatMQForAzure.Contracts;
+    using GnatMQForAzure.Entities;
     using GnatMQForAzure.Entities.Enums;
     using GnatMQForAzure.Events;
     using GnatMQForAzure.Exceptions;
+    using GnatMQForAzure.Managers;
     using GnatMQForAzure.Messages;
     using GnatMQForAzure.Session;
     using GnatMQForAzure.Utility;
@@ -45,12 +47,6 @@ namespace GnatMQForAzure
 
         // running status of threads
         public bool isRunning;
-
-        // event for raising received message event
-        public AutoResetEvent receiveEventWaitHandle;
-
-        // event for starting process inflight queue asynchronously
-        public AutoResetEvent inflightWaitHandle;
 
         // event for signaling synchronous receive
         public AutoResetEvent syncEndReceiving;
@@ -99,6 +95,8 @@ namespace GnatMQForAzure
 
         public int PreviouslyRead;
 
+        public MqttClientConnectionProcessingManager ProcessingManager;
+
         #endregion
 
         #region Constructors
@@ -133,11 +131,9 @@ namespace GnatMQForAzure
             this.keepAliveEvent = new AutoResetEvent(false);
 
             // queue for handling inflight messages (publishing and acknowledge)
-            this.inflightWaitHandle = new AutoResetEvent(false);
             this.inflightQueue = new ConcurrentQueue<MqttMsgContext>();
 
             // queue for received message
-            this.receiveEventWaitHandle = new AutoResetEvent(false);
             this.eventQueue = new ConcurrentQueue<InternalEvent>();
             this.internalQueue = new ConcurrentQueue<MqttMsgBase>();
 
@@ -305,21 +301,8 @@ namespace GnatMQForAzure
             // stop receiving thread
             this.isRunning = false;
 
-            // wait end receive event thread
-            if (this.receiveEventWaitHandle != null)
-                this.receiveEventWaitHandle.Set();
-
-            // wait end process inflight thread
-            if (this.inflightWaitHandle != null)
-                this.inflightWaitHandle.Set();
-
             // unlock keep alive thread
             this.keepAliveEvent.Set();
-
-            // clear all queues
-            this.inflightQueue.Clear();
-            this.internalQueue.Clear();
-            this.eventQueue.Clear();
 
             // close network channel
             this.channel.Close();
@@ -430,18 +413,30 @@ namespace GnatMQForAzure
             throw new NotImplementedException("See todo");
         }
 
-        /// <summary>
-        /// Wrapper method for raising events
-        /// </summary>
-        /// <param name="internalEvent">Internal event</param>
-        public void OnInternalEvent(InternalEvent internalEvent)
+        public void EnqueueInternalEvent(InternalEvent internalEvent)
         {
-            lock (this.eventQueue)
+            if (ProcessingManager != null)
             {
-                this.eventQueue.Enqueue(internalEvent);
+                eventQueue.Enqueue(internalEvent);
+                ProcessingManager.EnqueueClientConnectionWithInternalEventQueueToProcess(this);
             }
+        }
 
-            this.receiveEventWaitHandle.Set();
+        public void EnqueueInflight(MqttMsgContext inflightMessageContext)
+        {
+            if (ProcessingManager != null)
+            {
+                inflightQueue.Enqueue(inflightMessageContext);
+                ProcessingManager.EnqueueClientConnectionWithInflightQueueToProcess(this);
+            }
+        }
+
+        public void EnqueueRawMessage(MqttRawMessage rawMessage)
+        {
+            if (ProcessingManager != null)
+            {
+                ProcessingManager.EnqueueRawMessageForProcessing(rawMessage);
+            }
         }
 
         /// <summary>
@@ -452,7 +447,6 @@ namespace GnatMQForAzure
             if (!this.isConnectionClosing)
             {
                 this.isConnectionClosing = true;
-                this.receiveEventWaitHandle.Set();
             }
         }
 
@@ -603,43 +597,37 @@ namespace GnatMQForAzure
                 // there is a previous session
                 if (this.Session != null)
                 {
-                    lock (this.inflightQueue)
+                    foreach (MqttMsgContext msgContext in this.Session.InflightMessages.Values)
                     {
-                        foreach (MqttMsgContext msgContext in this.Session.InflightMessages.Values)
-                        {
-                            this.inflightQueue.Enqueue(msgContext);
+                        this.inflightQueue.Enqueue(msgContext);
 
-                            // if it is a PUBLISH message to publish
-                            if ((msgContext.Message.Type == MqttMsgBase.MQTT_MSG_PUBLISH_TYPE) &&
-                                (msgContext.Flow == MqttMsgFlow.ToPublish))
+                        // if it is a PUBLISH message to publish
+                        if ((msgContext.Message.Type == MqttMsgBase.MQTT_MSG_PUBLISH_TYPE)
+                            && (msgContext.Flow == MqttMsgFlow.ToPublish))
+                        {
+                            // it's QoS 1 and we haven't received PUBACK
+                            if ((msgContext.Message.QosLevel == MqttMsgBase.QOS_LEVEL_AT_LEAST_ONCE)
+                                && (msgContext.State == MqttMsgState.WaitForPuback))
                             {
-                                // it's QoS 1 and we haven't received PUBACK
-                                if ((msgContext.Message.QosLevel == MqttMsgBase.QOS_LEVEL_AT_LEAST_ONCE) &&
-                                    (msgContext.State == MqttMsgState.WaitForPuback))
+                                // we haven't received PUBACK, we need to resend PUBLISH message
+                                msgContext.State = MqttMsgState.QueuedQos1;
+                            }
+                            // it's QoS 2
+                            else if (msgContext.Message.QosLevel == MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE)
+                            {
+                                // we haven't received PUBREC, we need to resend PUBLISH message
+                                if (msgContext.State == MqttMsgState.WaitForPubrec)
                                 {
-                                    // we haven't received PUBACK, we need to resend PUBLISH message
-                                    msgContext.State = MqttMsgState.QueuedQos1;
+                                    msgContext.State = MqttMsgState.QueuedQos2;
                                 }
-                                // it's QoS 2
-                                else if (msgContext.Message.QosLevel == MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE)
+                                // we haven't received PUBCOMP, we need to resend PUBREL for it
+                                else if (msgContext.State == MqttMsgState.WaitForPubcomp)
                                 {
-                                    // we haven't received PUBREC, we need to resend PUBLISH message
-                                    if (msgContext.State == MqttMsgState.WaitForPubrec)
-                                    {
-                                        msgContext.State = MqttMsgState.QueuedQos2;
-                                    }
-                                    // we haven't received PUBCOMP, we need to resend PUBREL for it
-                                    else if (msgContext.State == MqttMsgState.WaitForPubcomp)
-                                    {
-                                        msgContext.State = MqttMsgState.SendPubrel;
-                                    }
+                                    msgContext.State = MqttMsgState.SendPubrel;
                                 }
                             }
                         }
                     }
-
-                    // unlock process inflight queue
-                    this.inflightWaitHandle.Set();
                 }
                 else
                 {

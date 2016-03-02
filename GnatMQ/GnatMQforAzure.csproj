@@ -65,7 +65,7 @@
     <Compile Include="Events\MsgPublishedInternalEvent.cs" />
     <Compile Include="Handlers\MqttClientConnectionInflightManager.cs" />
     <Compile Include="Handlers\MqttClientConnectionInternalEventManager.cs" />
-    <Compile Include="Managers\MqttClienConnectionProcessingManager.cs" />
+    <Compile Include="Managers\MqttClientConnectionProcessingManager.cs" />
     <Compile Include="Managers\MqttClientConnectionManager.cs" />
     <Compile Include="Handlers\MqttClientConnectionReceiveManager.cs" />
     <Compile Include="Managers\MqttClientConnectionTimeoutManager.cs" />
@@ -117,7 +117,6 @@
     <Compile Include="Session\MqttBrokerSession.cs" />
     <Compile Include="Session\MqttClientSession.cs" />
     <Compile Include="Session\MqttSession.cs" />
-    <Compile Include="Utility\QueueExtension.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

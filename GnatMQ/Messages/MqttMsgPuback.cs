@@ -78,16 +78,8 @@ namespace GnatMQForAzure.Messages
             return buffer;
         }
 
-        /// <summary>
-        /// Parse bytes for a PUBACK message
-        /// </summary>
-        /// <param name="fixedHeaderFirstByte">First fixed header byte</param>
-        /// <param name="protocolVersion">Protocol Version</param>
-        /// <param name="channel">Channel connected to the broker</param>
-        /// <returns>PUBACK message instance</returns>
-        public static MqttMsgPuback Parse(byte fixedHeaderFirstByte, byte protocolVersion, IMqttNetworkChannel channel)
+        public static MqttMsgPuback Parse(byte fixedHeaderFirstByte, byte protocolVersion, byte[] buffer)
         {
-            byte[] buffer;
             int index = 0;
             MqttMsgPuback msg = new MqttMsgPuback();
 
@@ -97,13 +89,6 @@ namespace GnatMQForAzure.Messages
                 if ((fixedHeaderFirstByte & MSG_FLAG_BITS_MASK) != MQTT_MSG_PUBACK_FLAG_BITS)
                     throw new MqttClientException(MqttClientErrorCode.InvalidFlagBits);
             }
-
-            // get remaining length and allocate buffer
-            int remainingLength = MqttMsgBase.decodeRemainingLength(channel);
-            buffer = new byte[remainingLength];
-
-            // read bytes from socket...
-            channel.Receive(buffer);
 
             // message id
             msg.messageId = (ushort)((buffer[index++] << 8) & 0xFF00);

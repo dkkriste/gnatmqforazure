@@ -145,7 +145,7 @@
                 timeout = (clientConnection.Settings.DelayOnRetry < timeout) ? clientConnection.Settings.DelayOnRetry : timeout;
 
                 // re-enqueue message
-                clientConnection.inflightQueue.Enqueue(msgContext);
+                clientConnection.EnqueueInflight(msgContext);
             }
 
             return timeout;
@@ -186,7 +186,7 @@
 
                     internalEvent = new MsgPublishedInternalEvent(msgReceived, true);
                     // notify received acknowledge from broker of a published message
-                    clientConnection.OnInternalEvent(internalEvent);
+                    clientConnection.EnqueueInternalEvent(internalEvent);
 
                     // PUBCOMP received for PUBLISH message with QoS Level 2, remove from session state
                     if (msgInflight.Type == MqttMsgBase.MQTT_MSG_PUBLISH_TYPE 
@@ -210,7 +210,7 @@
                     msgReceivedProcessed = true;
 
                     // re-enqueue message
-                    clientConnection.inflightQueue.Enqueue(msgContext);
+                    clientConnection.EnqueueInflight(msgContext);
                 }
             }
 
@@ -227,7 +227,7 @@
                         msgContext.State = MqttMsgState.SendPubrel;
 
                         // re-enqueue message
-                        clientConnection.inflightQueue.Enqueue(msgContext);
+                        clientConnection.EnqueueInflight(msgContext);
 
                         // update timeout (0 -> reanalyze queue immediately)
                         timeout = 0;
@@ -243,13 +243,13 @@
                         // if PUBCOMP for a PUBLISH message not received after retries, raise event for not published
                         internalEvent = new MsgPublishedInternalEvent(msgInflight, false);
                         // notify not received acknowledge from broker and message not published
-                        clientConnection.OnInternalEvent(internalEvent);
+                        clientConnection.EnqueueInternalEvent(internalEvent);
                     }
                 }
                 else
                 {
                     // re-enqueue message
-                    clientConnection.inflightQueue.Enqueue(msgContext);
+                    clientConnection.EnqueueInflight(msgContext);
 
                     // update timeout
                     int msgTimeout = clientConnection.Settings.DelayOnRetry - delta;
@@ -294,7 +294,7 @@
 
                     internalEvent = new MsgInternalEvent(msgInflight);
                     // notify published message from broker and acknowledged
-                    clientConnection.OnInternalEvent(internalEvent);
+                    clientConnection.EnqueueInternalEvent(internalEvent);
 
                     // PUBREL received (and PUBCOMP sent) for PUBLISH message with QoS Level 2, remove from session state
                     if ((msgInflight.Type == MqttMsgBase.MQTT_MSG_PUBLISH_TYPE) && (clientConnection.Session != null)
@@ -306,13 +306,13 @@
                 else
                 {
                     // re-enqueue message
-                    clientConnection.inflightQueue.Enqueue(msgContext);
+                    clientConnection.EnqueueInflight(msgContext);
                 }
             }
             else
             {
                 // re-enqueue message
-                clientConnection.inflightQueue.Enqueue(msgContext);
+                clientConnection.EnqueueInflight(msgContext);
             }
 
             return msgReceived;
@@ -367,7 +367,7 @@
                                   : timeout;
 
                     // re-enqueue message
-                    clientConnection.inflightQueue.Enqueue(msgContext);
+                    clientConnection.EnqueueInflight(msgContext);
                 }
             }
 
@@ -384,7 +384,7 @@
                         msgContext.State = MqttMsgState.QueuedQos2;
 
                         // re-enqueue message
-                        clientConnection.inflightQueue.Enqueue(msgContext);
+                        clientConnection.EnqueueInflight(msgContext);
 
                         // update timeout (0 -> reanalyze queue immediately)
                         timeout = 0;
@@ -401,13 +401,13 @@
                         // if PUBREC for a PUBLISH message not received after retries, raise event for not published
                         internalEvent = new MsgPublishedInternalEvent(msgInflight, false);
                         // notify not received acknowledge from broker and message not published
-                        clientConnection.OnInternalEvent(internalEvent);
+                        clientConnection.EnqueueInternalEvent(internalEvent);
                     }
                 }
                 else
                 {
                     // re-enqueue message
-                    clientConnection.inflightQueue.Enqueue(msgContext);
+                    clientConnection.EnqueueInflight(msgContext);
 
                     // update timeout
                     int msgTimeout = (clientConnection.Settings.DelayOnRetry - delta);
@@ -470,7 +470,7 @@
                 }
 
                 // notify received acknowledge from broker of a published message or subscribe/unsubscribe message
-                clientConnection.OnInternalEvent(internalEvent);
+                clientConnection.EnqueueInternalEvent(internalEvent);
 
                 // PUBACK received for PUBLISH message with QoS Level 1, remove from session state
                 if ((msgInflight.Type == MqttMsgBase.MQTT_MSG_PUBLISH_TYPE) && (clientConnection.Session != null)
@@ -495,7 +495,7 @@
                         msgContext.State = MqttMsgState.QueuedQos1;
 
                         // re-enqueue message
-                        clientConnection.inflightQueue.Enqueue(msgContext);
+                        clientConnection.EnqueueInflight(msgContext);
 
                         // update timeout (0 -> reanalyze queue immediately)
                         timeout = 0;
@@ -515,7 +515,7 @@
                             internalEvent = new MsgPublishedInternalEvent(msgInflight, false);
 
                             // notify not received acknowledge from broker and message not published
-                            clientConnection.OnInternalEvent(internalEvent);
+                            clientConnection.EnqueueInternalEvent(internalEvent);
                         }
                         // NOTE : not raise events for SUBACK or UNSUBACK not received
                         //        for the user no event raised means subscribe/unsubscribe failed
@@ -524,7 +524,7 @@
                 else
                 {
                     // re-enqueue message (I have to re-analyze for receiving PUBACK, SUBACK or UNSUBACK)
-                    clientConnection.inflightQueue.Enqueue(msgContext);
+                    clientConnection.EnqueueInflight(msgContext);
 
                     // update timeout
                     int msgTimeout = (clientConnection.Settings.DelayOnRetry - delta);
@@ -559,7 +559,7 @@
                 timeout = (clientConnection.Settings.DelayOnRetry < timeout) ? clientConnection.Settings.DelayOnRetry : timeout;
 
                 // re-enqueue message (I have to re-analyze for receiving PUBREC)
-                clientConnection.inflightQueue.Enqueue(msgContext);
+                clientConnection.EnqueueInflight(msgContext);
             }
             // QoS 2, PUBLISH message received from broker to acknowledge, send PUBREC, state change to wait PUBREL
             else if (msgContext.Flow == MqttMsgFlow.ToAcknowledge)
@@ -572,7 +572,7 @@
                 clientConnection.Send(pubrec);
 
                 // re-enqueue message (I have to re-analyze for receiving PUBREL)
-                clientConnection.inflightQueue.Enqueue(msgContext);
+                clientConnection.EnqueueInflight(msgContext);
             }
 
             return timeout;
@@ -618,7 +618,7 @@
                 timeout = (clientConnection.Settings.DelayOnRetry < timeout) ? clientConnection.Settings.DelayOnRetry : timeout;
 
                 // re-enqueue message (I have to re-analyze for receiving PUBACK, SUBACK or UNSUBACK)
-                clientConnection.inflightQueue.Enqueue(msgContext);
+                clientConnection.EnqueueInflight(msgContext);
             }
             // QoS 1, PUBLISH message received from broker to acknowledge, send PUBACK
             else if (msgContext.Flow == MqttMsgFlow.ToAcknowledge)
@@ -630,7 +630,7 @@
 
                 internalEvent = new MsgInternalEvent(msgInflight);
                 // notify published message from broker and acknowledged
-                clientConnection.OnInternalEvent(internalEvent);
+                clientConnection.EnqueueInternalEvent(internalEvent);
             }
             return timeout;
         }
@@ -650,7 +650,7 @@
             else if (msgContext.Flow == MqttMsgFlow.ToAcknowledge)
             {
                 internalEvent = new MsgInternalEvent(msgInflight);
-                clientConnection.OnInternalEvent(internalEvent);
+                clientConnection.EnqueueInternalEvent(internalEvent);
             }
         }
     }

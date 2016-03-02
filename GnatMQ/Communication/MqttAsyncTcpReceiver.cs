@@ -86,8 +86,7 @@
                     if (payloadLength <= remainingBytesToProcess)
                     {
                         var rawMessage = rawMessageManager.GetRawMessageWithData(clientConnection, messageType, receiveSendEventArgs.Buffer, bufferOffset, payloadLength);
-
-                        // TODO enqueue raw message
+                        clientConnection.EnqueueRawMessage(rawMessage);
                         bufferOffset += payloadLength;
                         remainingBytesToProcess -= payloadLength;
                         lastProcessedByteByCompleteMessage = bufferOffset;

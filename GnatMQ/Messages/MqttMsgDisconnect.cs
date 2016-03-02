@@ -33,14 +33,7 @@ namespace GnatMQForAzure.Messages
             this.type = MQTT_MSG_DISCONNECT_TYPE;
         }
 
-        /// <summary>
-        /// Parse bytes for a DISCONNECT message
-        /// </summary>
-        /// <param name="fixedHeaderFirstByte">First fixed header byte</param>
-        /// <param name="protocolVersion">Protocol Version</param>
-        /// <param name="channel">Channel connected to the broker</param>
-        /// <returns>DISCONNECT message instance</returns>
-        public static MqttMsgDisconnect Parse(byte fixedHeaderFirstByte, byte protocolVersion, IMqttNetworkChannel channel)
+        public static MqttMsgDisconnect Parse(byte fixedHeaderFirstByte, byte protocolVersion)
         {
             MqttMsgDisconnect msg = new MqttMsgDisconnect();
 
@@ -48,12 +41,10 @@ namespace GnatMQForAzure.Messages
             {
                 // [v3.1.1] check flag bits
                 if ((fixedHeaderFirstByte & MSG_FLAG_BITS_MASK) != MQTT_MSG_DISCONNECT_FLAG_BITS)
+                {
                     throw new MqttClientException(MqttClientErrorCode.InvalidFlagBits);
+                }
             }
-
-            // get remaining length and allocate buffer
-            int remainingLength = MqttMsgBase.decodeRemainingLength(channel);
-            // NOTE : remainingLength must be 0
 
             return msg;
         }

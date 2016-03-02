@@ -67,16 +67,8 @@ namespace GnatMQForAzure.Messages
             this.qosLevel = QOS_LEVEL_AT_LEAST_ONCE;
         }
 
-        /// <summary>
-        /// Parse bytes for a UNSUBSCRIBE message
-        /// </summary>
-        /// <param name="fixedHeaderFirstByte">First fixed header byte</param>
-        /// <param name="protocolVersion">Protocol Version</param>
-        /// <param name="channel">Channel connected to the broker</param>
-        /// <returns>UNSUBSCRIBE message instance</returns>
-        public static MqttMsgUnsubscribe Parse(byte fixedHeaderFirstByte, byte protocolVersion, IMqttNetworkChannel channel)
+        public static MqttMsgUnsubscribe Parse(byte fixedHeaderFirstByte, byte protocolVersion, byte[] buffer)
         {
-            byte[] buffer;
             int index = 0;
             byte[] topicUtf8;
             int topicUtf8Length;
@@ -88,13 +80,6 @@ namespace GnatMQForAzure.Messages
                 if ((fixedHeaderFirstByte & MSG_FLAG_BITS_MASK) != MQTT_MSG_UNSUBSCRIBE_FLAG_BITS)
                     throw new MqttClientException(MqttClientErrorCode.InvalidFlagBits);
             }
-
-            // get remaining length and allocate buffer
-            int remainingLength = MqttMsgBase.decodeRemainingLength(channel);
-            buffer = new byte[remainingLength];
-
-            // read bytes from socket...
-            int received = channel.Receive(buffer);
 
             if (protocolVersion == MqttMsgConnect.PROTOCOL_VERSION_V3_1)
             {
@@ -124,8 +109,9 @@ namespace GnatMQForAzure.Messages
                 topicUtf8 = new byte[topicUtf8Length];
                 Array.Copy(buffer, index, topicUtf8, 0, topicUtf8Length);
                 index += topicUtf8Length;
-                tmpTopics.Add(new String(Encoding.UTF8.GetChars(topicUtf8)));
-            } while (index < remainingLength);
+                tmpTopics.Add(new string(Encoding.UTF8.GetChars(topicUtf8)));
+            }
+            while (index < buffer.Length);
 
             // copy from list to array
             msg.topics = new string[tmpTopics.Count];
