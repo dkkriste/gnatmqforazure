@@ -10,10 +10,7 @@
 
     public class MqttClientConnectionInflightManager
     {
-        /// <summary>
-        /// Process inflight messages queue
-        /// </summary>
-        private void ProcessInflightThread(MqttClientConnection clientConnection)
+        public void ProcessInflightQueue(MqttClientConnection clientConnection)
         {
             if (!clientConnection.isRunning)
             {

@@ -17,6 +17,7 @@ Contributors:
 
 namespace GnatMQForAzure.Managers
 {
+    using System.Collections.Concurrent;
     using System.Collections.Generic;
     using System.Linq;
     using System.Text.RegularExpressions;
@@ -41,17 +42,17 @@ namespace GnatMQForAzure.Managers
         #endregion
 
         // MQTT subscription comparer
-        private MqttSubscriptionComparer comparer;
+        private readonly MqttSubscriptionComparer comparer;
 
         // subscribers list for each topic
-        private Dictionary<string, List<MqttSubscription>> subscribers;
+        private readonly ConcurrentDictionary<string, List<MqttSubscription>> subscribers;
 
         /// <summary>
         /// Constructor
         /// </summary>
         public MqttSubscriberManager()
         {
-            this.subscribers = new Dictionary<string, List<MqttSubscription>>();
+            this.subscribers = new ConcurrentDictionary<string, List<MqttSubscription>>();
             this.comparer = new MqttSubscriptionComparer(MqttSubscriptionComparer.MqttSubscriptionComparerType.OnClientId);
         }
 
@@ -65,23 +66,10 @@ namespace GnatMQForAzure.Managers
         {
             string topicReplaced = topic.Replace(PLUS_WILDCARD, PLUS_WILDCARD_REPLACE).Replace(SHARP_WILDCARD, SHARP_WILDCARD_REPLACE);
 
-            lock (this.subscribers)
+            var subscriptionsForTopic = subscribers.GetOrAdd(topicReplaced, new List<MqttSubscription>());
+            lock (subscriptionsForTopic)
             {
-                // if the topic doesn't exist
-                if (!this.subscribers.ContainsKey(topicReplaced))
-                {
-                    // create a new empty subscription list for the topic
-                    List<MqttSubscription> list = new List<MqttSubscription>();
-                    this.subscribers.Add(topicReplaced, list);
-                }
-
-                // query for check client already subscribed
-                var query = from s in this.subscribers[topicReplaced]
-                            where s.ClientId == clientConnection.ClientId
-                            select s;
-
-                // if the client isn't already subscribed to the topic 
-                if (query.Count() == 0)
+                if (!AlreadySubscribed(clientConnection.ClientId, subscriptionsForTopic))
                 {
                     MqttSubscription subscription = new MqttSubscription()
                     {
@@ -90,8 +78,8 @@ namespace GnatMQForAzure.Managers
                         QosLevel = qosLevel,
                         ClientConnection = clientConnection
                     };
-                    // add subscription to the list for the topic
-                    this.subscribers[topicReplaced].Add(subscription);
+
+                    subscriptionsForTopic.Add(subscription);
                 }
             }
         }
@@ -105,30 +93,19 @@ namespace GnatMQForAzure.Managers
         {
             string topicReplaced = topic.Replace(PLUS_WILDCARD, PLUS_WILDCARD_REPLACE).Replace(SHARP_WILDCARD, SHARP_WILDCARD_REPLACE);
 
-            lock (this.subscribers)
+            List<MqttSubscription> subscriptionsForTopic;
+            if (this.subscribers.TryGetValue(topicReplaced, out subscriptionsForTopic))
             {
-                // if the topic exists
-                if (this.subscribers.ContainsKey(topicReplaced))
+                lock (subscriptionsForTopic)
                 {
-                    // query for check client subscribed
-                    var query = from s in this.subscribers[topicReplaced]
-                                where s.ClientId == clientConnection.ClientId
-                                select s;
-
-                    // if the client is subscribed for the topic
-                    if (query.Count() > 0)
+                    foreach (var subscription in subscriptionsForTopic)
                     {
-                        MqttSubscription subscription = query.First();
-                        
-                        // remove subscription from the list for the topic
-                        this.subscribers[topicReplaced].Remove(subscription);
-                        // dispose subscription
-                        subscription.Dispose();
-
-                        // remove topic if there aren't subscribers
-                        if (this.subscribers[topicReplaced].Count == 0)
+                        if (subscription.ClientId == clientConnection.ClientId)
                         {
-                            this.subscribers.Remove(topicReplaced);
+                            subscriptionsForTopic.Remove(subscription);
+                            subscription.Dispose();
+                            // TODO deal with topic with no subscribers
+                            return;
                         }
                     }
                 }
@@ -141,42 +118,7 @@ namespace GnatMQForAzure.Managers
         /// <param name="clientConnection">Client to unsubscribe</param>
         public void Unsubscribe(MqttClientConnection clientConnection)
         {
-            lock (this.subscribers)
-            {
-                List<string> topicToRemove = new List<string>();
-
-                foreach (string topic in this.subscribers.Keys)
-                {
-                    // query for check client subscribed
-                    var query = from s in this.subscribers[topic]
-                                where s.ClientId == clientConnection.ClientId
-                                select s;
-
-                    // if the client is subscribed for the topic
-                    if (query.Count() > 0)
-                    {
-                        MqttSubscription subscription = query.First();
-
-                        // remove subscription from the list for the topic
-                        this.subscribers[topic].Remove(subscription);
-                        // dispose subscription
-                        subscription.Dispose();
-
-                        // add topic to remove list if there aren't subscribers
-                        if (this.subscribers[topic].Count == 0)
-                        {
-                            topicToRemove.Add(topic);
-                        }
-                    }
-                }
-
-                // remove topic without subscribers
-                // loop needed to avoid exception on modify collection inside previous loop
-                foreach (string topic in topicToRemove)
-                {
-                    this.subscribers.Remove(topic);
-                }
-            }
+            this.subscribers.Keys.AsParallel().ForAll(c => Unsubscribe(c, clientConnection));
         }
 
         /// <summary>
@@ -260,6 +202,19 @@ namespace GnatMQForAzure.Managers
 
             // I need all subscriptions, also overlapped (used to save session)
             return query.ToList();
+        }
+
+        private bool AlreadySubscribed(string clientId, List<MqttSubscription> currentSubscriptions)
+        {
+            foreach (var subscription in currentSubscriptions)
+            {
+                if (subscription.ClientId == clientId)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 }

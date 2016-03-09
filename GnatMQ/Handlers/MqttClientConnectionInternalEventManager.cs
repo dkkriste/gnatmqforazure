@@ -1,14 +1,25 @@
 ﻿namespace GnatMQForAzure.Handlers
 {
+    using System;
+
     using GnatMQForAzure.Events;
+    using GnatMQForAzure.Exceptions;
+    using GnatMQForAzure.Managers;
     using GnatMQForAzure.Messages;
 
     public class MqttClientConnectionInternalEventManager
     {
-        /// <summary>
-        /// Thread for raising event
-        /// </summary>
-        private void DispatchEventThread(MqttClientConnection clientConnection)
+        private readonly MqttPublishManager publishManager;
+
+        private readonly MqttSubscriberManager subscriberManager;
+
+        public MqttClientConnectionInternalEventManager(MqttPublishManager publishManager, MqttSubscriberManager subscriberManager)
+        {
+            this.publishManager = publishManager;
+            this.subscriberManager = subscriberManager;
+        }
+
+        public void ProcessInternalEventQueue(MqttClientConnection clientConnection)
         {
             if (!clientConnection.isRunning)
             {
@@ -31,12 +42,12 @@
                         // SUBSCRIBE message received
                         case MqttMsgBase.MQTT_MSG_SUBSCRIBE_TYPE:
                             MqttMsgSubscribe subscribe = (MqttMsgSubscribe)msg;
-                            clientConnection.OnMqttMsgSubscribeReceived(subscribe.MessageId, subscribe.Topics, subscribe.QoSLevels);
+                            OnMqttMsgSubscribeReceived(clientConnection, subscribe.MessageId, subscribe.Topics, subscribe.QoSLevels);
                             break;
 
                         // SUBACK message received
                         case MqttMsgBase.MQTT_MSG_SUBACK_TYPE:
-                            clientConnection.OnMqttMsgSubscribed((MqttMsgSuback)msg);
+                            OnMqttMsgSubscribed(clientConnection, (MqttMsgSuback)msg);
                             break;
 
                         // PUBLISH message received
@@ -44,48 +55,45 @@
                             // PUBLISH message received in a published internal event, no publish succeeded
                             if (internalEvent.GetType() == typeof(MsgPublishedInternalEvent))
                             {
-                                clientConnection.OnMqttMsgPublished(msg.MessageId, false);
+                                OnMqttMsgPublished(clientConnection, msg.MessageId, false);
                             }
                             else
                             {
                                 // raise PUBLISH message received event 
-                                clientConnection.OnMqttMsgPublishReceived((MqttMsgPublish)msg);
+                                OnMqttMsgPublishReceived((MqttMsgPublish)msg);
                             }
 
                             break;
 
-                        // PUBACK message received
+                        // (PUBACK received for QoS Level 1)
                         case MqttMsgBase.MQTT_MSG_PUBACK_TYPE:
-                            // (PUBACK received for QoS Level 1)
-                            clientConnection.OnMqttMsgPublished(msg.MessageId, true);
+                            OnMqttMsgPublished(clientConnection, msg.MessageId, true);
                             break;
 
-                        // PUBREL message received
+                        // (PUBREL received for QoS Level 2)
                         case MqttMsgBase.MQTT_MSG_PUBREL_TYPE:
-                            // (PUBREL received for QoS Level 2)
-                            clientConnection.OnMqttMsgPublishReceived((MqttMsgPublish)msg);
+                            OnMqttMsgPublishReceived((MqttMsgPublish)msg);
                             break;
 
-                        // PUBCOMP message received
+                        // (PUBCOMP received for QoS Level 2)
                         case MqttMsgBase.MQTT_MSG_PUBCOMP_TYPE:
-                            // (PUBCOMP received for QoS Level 2)
-                            clientConnection.OnMqttMsgPublished(msg.MessageId, true);
+                            OnMqttMsgPublished(clientConnection, msg.MessageId, true);
                             break;
 
                         // UNSUBSCRIBE message received from client
                         case MqttMsgBase.MQTT_MSG_UNSUBSCRIBE_TYPE:
                             MqttMsgUnsubscribe unsubscribe = (MqttMsgUnsubscribe)msg;
-                            clientConnection.OnMqttMsgUnsubscribeReceived(unsubscribe.MessageId, unsubscribe.Topics);
+                            OnMqttMsgUnsubscribeReceived(clientConnection, unsubscribe.MessageId, unsubscribe.Topics);
                             break;
 
                         // UNSUBACK message received
                         case MqttMsgBase.MQTT_MSG_UNSUBACK_TYPE:
-                            clientConnection.OnMqttMsgUnsubscribed(msg.MessageId);
+                            OnMqttMsgUnsubscribed(clientConnection, msg.MessageId);
                             break;
 
                         // DISCONNECT message received from client
                         case MqttMsgBase.MQTT_MSG_DISCONNECT_TYPE:
-                            clientConnection.OnMqttMsgDisconnected();
+                            OnMqttMsgDisconnected(clientConnection);
                             break;
                     }
                 }
@@ -100,6 +108,68 @@
                 // client raw disconnection
                 clientConnection.OnConnectionClosed();
             }
+        }
+
+        private void OnMqttMsgPublishReceived(MqttMsgPublish msg)
+        {
+            // create PUBLISH message to publish
+            // [v3.1.1] DUP flag from an incoming PUBLISH message is not propagated to subscribers
+            //          It should be set in the outgoing PUBLISH message based on transmission for each subscriber
+            MqttMsgPublish publish = new MqttMsgPublish(msg.Topic, msg.Message, false, msg.QosLevel, msg.Retain);
+
+            // publish message through publisher manager
+            this.publishManager.Publish(publish);
+        }
+
+        private void OnMqttMsgSubscribeReceived(MqttClientConnection clientConnection, ushort messageId, string[] topics, byte[] qosLevels)
+        {
+            for (int i = 0; i < topics.Length; i++)
+            {
+                // TODO : business logic to grant QoS levels based on some conditions ?
+                //        now the broker granted the QoS levels requested by client
+
+                // subscribe client for each topic and QoS level requested
+                this.subscriberManager.Subscribe(topics[i], qosLevels[i], clientConnection);
+            }
+            
+            // send SUBACK message to the client
+            clientConnection.Suback(messageId, qosLevels);
+
+            for (int i = 0; i < topics.Length; i++)
+            {
+                // publish retained message on the current subscription
+                this.publishManager.PublishRetaind(topics[i], clientConnection.ClientId);
+            }
+        }
+
+        private void OnMqttMsgUnsubscribeReceived(MqttClientConnection clientConnection, ushort messageId, string[] topics)
+        {
+            for (int i = 0; i < topics.Length; i++)
+            {
+                // unsubscribe client for each topic requested
+                this.subscriberManager.Unsubscribe(topics[i], clientConnection);
+            }
+
+            // send UNSUBACK message to the client
+            clientConnection.Unsuback(messageId);
+        }
+
+        private void OnMqttMsgPublished(MqttClientConnection clientConnection, ushort messageId, bool isPublished)
+        {
+        }
+
+        private void OnMqttMsgSubscribed(MqttClientConnection clientConnection, MqttMsgSuback suback)
+        {
+        }
+
+        private void OnMqttMsgUnsubscribed(MqttClientConnection clientConnection, ushort messageId)
+        {
+        }
+
+        private void OnMqttMsgDisconnected(MqttClientConnection clientConnection)
+        {
+            // close the client
+            clientConnection.Close();
         }
     }
 }

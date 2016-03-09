@@ -190,9 +190,6 @@ namespace GnatMQForAzure
         /// </summary>
         public delegate void ConnectionClosedEventHandler(object sender, EventArgs e);
 
-        // event for PUBLISH message received
-        public event MqttMsgPublishEventHandler MqttMsgPublishReceived;
-
         // event for published message
         public event MqttMsgPublishedEventHandler MqttMsgPublished;
         
@@ -201,12 +198,6 @@ namespace GnatMQForAzure
         
         // event for unsubscribed topic
         public event MqttMsgUnsubscribedEventHandler MqttMsgUnsubscribed;
-        
-        // event for SUBSCRIBE message received
-        public event MqttMsgSubscribeEventHandler MqttMsgSubscribeReceived;
-        
-        // event for USUBSCRIBE message received
-        public event MqttMsgUnsubscribeEventHandler MqttMsgUnsubscribeReceived;
         
         // event for CONNECT message received
         public event MqttMsgConnectEventHandler MqttMsgConnected;
@@ -285,24 +276,10 @@ namespace GnatMQForAzure
         /// <param name="userCertificateSelectionCallback">A RemoteCertificateValidationCallback delegate responsible for validating the certificate supplied by the remote party</param>
         /// <param name="userCertificateValidationCallback">A LocalCertificateSelectionCallback delegate responsible for selecting the certificate used for authentication</param>
 
-        /// <summary>
-        /// Open client communication
-        /// </summary>
-        public void Open()
-        {
-            this.isRunning = true;
-        }
-
-        /// <summary>
-        /// Close client
-        /// </summary>
         public void Close()
         {
             // stop receiving thread
             this.isRunning = false;
-
-            // unlock keep alive thread
-            this.keepAliveEvent.Set();
 
             // close network channel
             this.channel.Close();
@@ -450,81 +427,6 @@ namespace GnatMQForAzure
             }
         }
 
-        /// <summary>
-        /// Wrapper method for raising PUBLISH message received event
-        /// </summary>
-        /// <param name="publish">PUBLISH message received</param>
-        public void OnMqttMsgPublishReceived(MqttMsgPublish publish)
-        {
-            if (this.MqttMsgPublishReceived != null)
-            {
-                this.MqttMsgPublishReceived(this, new MqttMsgPublishEventArgs(publish.Topic, publish.Message, publish.DupFlag, publish.QosLevel, publish.Retain));
-            }
-        }
-
-        /// <summary>
-        /// Wrapper method for raising published message event
-        /// </summary>
-        /// <param name="messageId">Message identifier for published message</param>
-        /// <param name="isPublished">Publish flag</param>
-        public void OnMqttMsgPublished(ushort messageId, bool isPublished)
-        {
-            if (this.MqttMsgPublished != null)
-            {
-                this.MqttMsgPublished(this, new MqttMsgPublishedEventArgs(messageId, isPublished));
-            }
-        }
-
-        /// <summary>
-        /// Wrapper method for raising subscribed topic event
-        /// </summary>
-        /// <param name="suback">SUBACK message received</param>
-        public void OnMqttMsgSubscribed(MqttMsgSuback suback)
-        {
-            if (this.MqttMsgSubscribed != null)
-            {
-                this.MqttMsgSubscribed(this, new MqttMsgSubscribedEventArgs(suback.MessageId, suback.GrantedQoSLevels));
-            }
-        }
-
-        /// <summary>
-        /// Wrapper method for raising unsubscribed topic event
-        /// </summary>
-        /// <param name="messageId">Message identifier for unsubscribed topic</param>
-        public void OnMqttMsgUnsubscribed(ushort messageId)
-        {
-            if (this.MqttMsgUnsubscribed != null)
-            {
-                this.MqttMsgUnsubscribed(this, new MqttMsgUnsubscribedEventArgs(messageId));
-            }
-        }
-
-        /// <summary>
-        /// Wrapper method for raising SUBSCRIBE message event
-        /// </summary>
-        /// <param name="messageId">Message identifier for subscribe topics request</param>
-        /// <param name="topics">Topics requested to subscribe</param>
-        /// <param name="qosLevels">List of QOS Levels requested</param>
-        public void OnMqttMsgSubscribeReceived(ushort messageId, string[] topics, byte[] qosLevels)
-        {
-            if (this.MqttMsgSubscribeReceived != null)
-            {
-                this.MqttMsgSubscribeReceived(this, new MqttMsgSubscribeEventArgs(messageId, topics, qosLevels));
-            }
-        }
-
-        /// <summary>
-        /// Wrapper method for raising UNSUBSCRIBE message event
-        /// </summary>
-        /// <param name="messageId">Message identifier for unsubscribe topics request</param>
-        /// <param name="topics">Topics requested to unsubscribe</param>
-        public void OnMqttMsgUnsubscribeReceived(ushort messageId, string[] topics)
-        {
-            if (this.MqttMsgUnsubscribeReceived != null)
-            {
-                this.MqttMsgUnsubscribeReceived(this, new MqttMsgUnsubscribeEventArgs(messageId, topics));
-            }
-        }
 
         /// <summary>
         /// Wrapper method for raising CONNECT message event

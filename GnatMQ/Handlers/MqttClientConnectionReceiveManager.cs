@@ -13,10 +13,7 @@
 
     public class MqttClientConnectionReceiveManager
     {
-        /// <summary>
-        /// Thread for receiving messages
-        /// </summary>
-        private void ReceiveThread(MqttRawMessage rawMessage)
+        public void ProcessReceivedMessage(MqttRawMessage rawMessage)
         {
             if (!rawMessage.ClientConnection.isRunning)
             {

@@ -18,6 +18,7 @@ Contributors:
 namespace GnatMQForAzure.Managers
 {
     using System.Collections;
+    using System.Collections.Concurrent;
     using System.Collections.Generic;
 
     using GnatMQForAzure.Messages;
@@ -29,14 +30,14 @@ namespace GnatMQForAzure.Managers
     public class MqttSessionManager
     {
         // subscription info for each client
-        private Dictionary<string, MqttBrokerSession> sessions;
+        private readonly ConcurrentDictionary<string, MqttBrokerSession> sessions;
 
         /// <summary>
         /// Constructor
         /// </summary>
         public MqttSessionManager()
         {
-            this.sessions = new Dictionary<string, MqttBrokerSession>();
+            this.sessions = new ConcurrentDictionary<string, MqttBrokerSession>();
         }
 
         /// <summary>
@@ -57,7 +58,7 @@ namespace GnatMQForAzure.Managers
                 session.ClientId = clientId;
 
                 // add to sessions list
-                this.sessions.Add(clientId, session);
+                this.sessions.TryAdd(clientId, session);
             }
             else
             {
@@ -120,7 +121,8 @@ namespace GnatMQForAzure.Managers
             {
                 // clear and remove client session
                 this.sessions[clientId].Clear();
-                this.sessions.Remove(clientId);
+                MqttBrokerSession sessionToBeRemoved;
+                this.sessions.TryRemove(clientId, out sessionToBeRemoved);
             }
         }
     }

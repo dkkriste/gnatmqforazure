@@ -106,7 +106,7 @@
     <Compile Include="Utility\MqttSslUtility.cs" />
     <Compile Include="Communication\MqttTcpCommunicationLayer.cs" />
     <Compile Include="MqttBroker.cs" />
-    <Compile Include="Managers\MqttPublisherManager.cs" />
+    <Compile Include="Managers\MqttPublishManager.cs" />
     <Compile Include="Managers\MqttSessionManager.cs" />
     <Compile Include="MqttSettings.cs" />
     <Compile Include="Managers\MqttSubscriberManager.cs" />

@@ -18,7 +18,6 @@
 
             while (clientConnection.isRunning)
             {
-
                 // waiting...
                 clientConnection.keepAliveEvent.WaitOne(wait);
 
