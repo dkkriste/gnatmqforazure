@@ -23,6 +23,7 @@ namespace GnatMQForAzure.Managers
     using System.Linq;
     using System.Text.RegularExpressions;
 
+    using GnatMQForAzure.Handlers;
     using GnatMQForAzure.Messages;
     using GnatMQForAzure.Session;
     using GnatMQForAzure.Utility;
@@ -32,6 +33,8 @@ namespace GnatMQForAzure.Managers
     /// </summary>
     public class MqttPublishManager
     {
+        private readonly MqttClientConnectionIncomingMessageManager incomingMessageManager;
+
         // queue messages to publish
         private readonly BlockingCollection<MqttMsgBase> publishQueue;
 
@@ -177,7 +180,8 @@ namespace GnatMQForAzure.Managers
                                                 : retained.QosLevel;
 
                             // send PUBLISH message to the current subscriber
-                            subscription.ClientConnection.Publish(
+                            incomingMessageManager.Publish(
+                                subscription.ClientConnection,
                                 retained.Topic,
                                 retained.Message,
                                 qosLevel,
@@ -219,7 +223,8 @@ namespace GnatMQForAzure.Managers
                                                 ? subscription.QosLevel
                                                 : outgoingMsg.QosLevel;
 
-                            session.ClientConnection.Publish(
+                            incomingMessageManager.Publish(
+                                subscription.ClientConnection,
                                 outgoingMsg.Topic,
                                 outgoingMsg.Message,
                                 qosLevel,
@@ -259,7 +264,8 @@ namespace GnatMQForAzure.Managers
                                            : publish.QosLevel;
 
                             // send PUBLISH message to the current subscriber
-                            subscription.ClientConnection.Publish(
+                            incomingMessageManager.Publish(
+                                subscription.ClientConnection,
                                 publish.Topic,
                                 publish.Message,
                                 qosLevel,

@@ -16,7 +16,7 @@
     using GnatMQForAzure.Session;
     using GnatMQForAzure.Utility;
 
-    public class MqttClientConnectionProcessingManager : IMqttRunnable
+    public class MqttClientConnectionProcessingManager : IMqttRunnable, IMqttClientConnectionStarter
     {
         private readonly ILogger logger;
 
@@ -30,7 +30,7 @@
 
         private readonly MqttUacManager uacManager;
 
-        private readonly MqttClientConnectionReceiveManager receiveManager;
+        private readonly MqttClientConnectionIncomingMessageManager incomingMessageManager;
 
         private readonly MqttClientConnectionInflightManager inflightManager;
 
@@ -48,6 +48,8 @@
 
         private int numberOfConnectedClients;
 
+        private int numberOfAssignedClients;
+
         public MqttClientConnectionProcessingManager(ILogger logger)
         {
             this.logger = logger;
@@ -57,6 +59,8 @@
         }
 
         public int ConnectedClients => numberOfConnectedClients;
+
+        public int AssignedClients => numberOfAssignedClients;
 
         public void Start()
         {
@@ -99,7 +103,7 @@
                 try
                 {
                     var rawMessage = rawMessageQueue.Take();
-                    receiveManager.ProcessReceivedMessage(rawMessage);
+                    incomingMessageManager.ProcessReceivedMessage(rawMessage);
                 }
                 catch (Exception exception)
                 {
@@ -142,23 +146,18 @@
 
         #endregion
 
-        void commLayer_ClientConnected(object sender, MqttClientConnectedEventArgs e)
+        public void OpenClientConnection(MqttClientConnection clientConnection)
         {
-            // start client threads
-            Open(e.ClientConnection);
-        }
-
-        private void Open(MqttClientConnection clientConnection)
-        {
-            clientConnection.isRunning = true;
+            numberOfAssignedClients++;
+            clientConnection.IsRunning = true;
             clientConnection.ProcessingManager = this;
             Task.Factory.StartNew(() => CheckForClientTimeout(clientConnection));
         }
 
-        private void Close(MqttClientConnection clientConnection)
+        private void CloseClientConnection(MqttClientConnection clientConnection)
         {
             // stop receiving thread
-            clientConnection.isRunning = false;
+            clientConnection.IsRunning = false;
 
             clientConnection.IsConnected = false;
         }
@@ -170,7 +169,7 @@
             // broker need to receive the first message (CONNECT)
             // within a reasonable amount of time after TCP/IP connection
             // wait on receiving message from client with a connection timeout
-            if (clientConnection.isRunning && !clientConnection.IsConnected && clientConnection.eventQueue.IsEmpty)
+            if (clientConnection.IsRunning && !clientConnection.IsConnected && clientConnection.EventQueue.IsEmpty)
             {
                 clientConnection.OnConnectionClosed();
             }
@@ -180,31 +179,27 @@
         {
             clientConnection.ProtocolVersion = (MqttProtocolVersion)message.ProtocolVersion;
 
-            // [v3.1.1] session present flag
-            bool sessionPresent = false;
-            // [v3.1.1] generated client id for client who provides client id zero bytes length
-            string clientId = null;
-
             // verify message to determine CONNACK message return code to the client
-            byte returnCode = this.MqttConnectVerify(message);
+            byte returnCode = MqttConnectVerify(message);
 
             // [v3.1.1] if client id is zero length, the broker assigns a unique identifier to it
-            clientId = (message.ClientId.Length != 0) ? message.ClientId : Guid.NewGuid().ToString();
+            var clientId = (message.ClientId.Length != 0) ? message.ClientId : Guid.NewGuid().ToString();
 
             // connection "could" be accepted
             if (returnCode == MqttMsgConnack.CONN_ACCEPTED)
             {
                 // check if there is a client already connected with same client Id
-                MqttClientConnection clientConnectionConnected = this.GetClient(clientId);
+                MqttClientConnection clientConnectionConnected = GetClient(clientId);
 
                 // force connection close to the existing client (MQTT protocol)
                 if (clientConnectionConnected != null)
                 {
-                    this.OnConnectionClosed(clientConnectionConnected);
+                    OnConnectionClosed(clientConnectionConnected);
                 }
 
                 // add client to the collection
-                this.allConnectedClients.TryAdd(clientId, clientConnection);
+                allConnectedClients.TryAdd(clientId, clientConnection);
+                numberOfConnectedClients++;
             }
 
             // connection accepted, load (if exists) client session
@@ -218,6 +213,9 @@
 
                     // get session for the connected client
                     MqttBrokerSession session = this.sessionManager.GetSession(clientId);
+
+                    // [v3.1.1] session present flag
+                    bool sessionPresent = false;
 
                     // set inflight queue into the client session
                     if (session != null)
@@ -266,7 +264,7 @@
                 else
                 {
                     // send CONNACK message to the client
-                    outgoingMessageManager.Connack(clientConnection, message, returnCode, clientId, sessionPresent);
+                    outgoingMessageManager.Connack(clientConnection, message, returnCode, clientId, false);
 
                     this.sessionManager.ClearSession(clientId);
                 }
@@ -274,14 +272,12 @@
             else
             {
                 // send CONNACK message to the client
-                outgoingMessageManager.Connack(clientConnection, message, returnCode, clientId, sessionPresent);
+                outgoingMessageManager.Connack(clientConnection, message, returnCode, clientId, false);
             }
         }
 
         public void OnConnectionClosed(MqttClientConnection clientConnection)
         {
-            
-
             // if client is connected
             MqttClientConnection connectedClient;
             if (clientConnection.IsConnected
@@ -314,11 +310,13 @@
                 this.subscriberManager.Unsubscribe(clientConnection);
 
                 // close the client
-                Close(clientConnection);
+                CloseClientConnection(clientConnection);
+                numberOfConnectedClients--;
             }
             else
             {
                 //TODO
+                numberOfAssignedClients--;
             }
         }
 
@@ -331,38 +329,38 @@
         /// <returns>Return code for CONNACK message</returns>
         private byte MqttConnectVerify(MqttMsgConnect connect)
         {
-            byte returnCode = MqttMsgConnack.CONN_ACCEPTED;
-
             // unacceptable protocol version
-            if ((connect.ProtocolVersion != MqttMsgConnect.PROTOCOL_VERSION_V3_1) &&
-                (connect.ProtocolVersion != MqttMsgConnect.PROTOCOL_VERSION_V3_1_1))
-                returnCode = MqttMsgConnack.CONN_REFUSED_PROT_VERS;
-            else
+            if ((connect.ProtocolVersion != MqttMsgConnect.PROTOCOL_VERSION_V3_1)
+                && (connect.ProtocolVersion != MqttMsgConnect.PROTOCOL_VERSION_V3_1_1))
             {
-                // client id length exceeded (only for old MQTT 3.1)
-                if ((connect.ProtocolVersion == MqttMsgConnect.PROTOCOL_VERSION_V3_1) &&
-                     (connect.ClientId.Length > MqttMsgConnect.CLIENT_ID_MAX_LENGTH))
-                    returnCode = MqttMsgConnack.CONN_REFUSED_IDENT_REJECTED;
-                else
-                {
-                    // [v.3.1.1] client id zero length is allowed but clean session must be true
-                    if ((connect.ClientId.Length == 0) && (!connect.CleanSession))
-                        returnCode = MqttMsgConnack.CONN_REFUSED_IDENT_REJECTED;
-                    else
-                    {
-                        // check user authentication
-                        if (!this.uacManager.UserAuthentication(connect.Username, connect.Password))
-                            returnCode = MqttMsgConnack.CONN_REFUSED_USERNAME_PASSWORD;
-                        // server unavailable and not authorized ?
-                        else
-                        {
-                            // TODO : other checks on CONNECT message
-                        }
-                    }
-                }
+                return MqttMsgConnack.CONN_REFUSED_PROT_VERS;
             }
 
-            return returnCode;
+            // client id length exceeded (only for old MQTT 3.1)
+            if ((connect.ProtocolVersion == MqttMsgConnect.PROTOCOL_VERSION_V3_1)
+                && (connect.ClientId.Length > MqttMsgConnect.CLIENT_ID_MAX_LENGTH))
+            {
+                return MqttMsgConnack.CONN_REFUSED_IDENT_REJECTED;
+            }
+
+            // [v.3.1.1] client id zero length is allowed but clean session must be true
+            if ((connect.ClientId.Length == 0) && (!connect.CleanSession))
+            {
+                return MqttMsgConnack.CONN_REFUSED_IDENT_REJECTED;
+            }
+
+            // check user authentication
+            if (!this.uacManager.UserAuthentication(connect.Username, connect.Password))
+            {
+                return MqttMsgConnack.CONN_REFUSED_USERNAME_PASSWORD;
+            }
+            // server unavailable and not authorized ?
+            else
+            {
+                // TODO : other checks on CONNECT message
+            }
+
+            return MqttMsgConnack.CONN_ACCEPTED;
         }
 
         /// <summary>

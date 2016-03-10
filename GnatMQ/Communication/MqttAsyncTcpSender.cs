@@ -15,6 +15,7 @@
         public MqttAsyncTcpSender(int numberOfSendBuffers, int sendBufferSize)
         {
             sendBufferManager = new BufferManager(numberOfSendBuffers, sendBufferSize);
+            sendBufferEventArgsPool = new ConcurrentStack<SocketAsyncEventArgs>();
 
             for (var i = 0; i < numberOfSendBuffers ; i++)
             {

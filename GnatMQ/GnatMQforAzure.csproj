@@ -43,6 +43,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Contracts\ILogger.cs" />
+    <Compile Include="Contracts\IMqttClientConnectionManager.cs" />
+    <Compile Include="Contracts\IMqttClientConnectionStarter.cs" />
     <Compile Include="Entities\BufferManager.cs" />
     <Compile Include="Entities\MqttOptions.cs" />
     <Compile Include="Entities\MqttRawMessage.cs" />
@@ -67,9 +69,10 @@
     <Compile Include="Handlers\MqttClientConnectionInternalEventManager.cs" />
     <Compile Include="Managers\MqttClientConnectionProcessingManager.cs" />
     <Compile Include="Managers\MqttClientConnectionManager.cs" />
-    <Compile Include="Handlers\MqttClientConnectionReceiveManager.cs" />
+    <Compile Include="Handlers\MqttClientConnectionIncomingMessageManager.cs" />
     <Compile Include="Managers\MqttClientConnectionTimeoutManager.cs" />
     <Compile Include="Managers\MqttOutgoingMessageManager.cs" />
+    <Compile Include="Managers\MqttProcessingLoadbalancer.cs" />
     <Compile Include="Managers\MqttRawMessageManager.cs" />
     <Compile Include="Managers\MqttSubscription.cs" />
     <Compile Include="Utility\MqttSubscriptionComparer.cs" />

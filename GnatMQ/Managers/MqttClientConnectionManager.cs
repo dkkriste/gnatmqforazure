@@ -5,12 +5,11 @@
     using System.Net.Sockets;
 
     using GnatMQForAzure.Communication;
+    using GnatMQForAzure.Contracts;
     using GnatMQForAzure.Entities;
 
-    public class MqttClientConnectionManager
+    public class MqttClientConnectionManager : IMqttClientConnectionManager
     {
-        private readonly MqttAsyncTcpReceiver receiver;
-
         private readonly ConcurrentDictionary<Guid, MqttClientConnection> connectedClients;
 
         private readonly ConcurrentStack<MqttClientConnection> unconnectedClients;
@@ -19,12 +18,11 @@
 
         public MqttClientConnectionManager(MqttOptions options, MqttAsyncTcpReceiver receiver)
         {
-            this.receiver = receiver;
             connectedClients = new ConcurrentDictionary<Guid, MqttClientConnection>();
             unconnectedClients = new ConcurrentStack<MqttClientConnection>();
             readSocketBufferManager = new BufferManager(1024, 8192);
 
-            for (var i = 0; i < options.NumberOfConnections; i++)
+            for (var i = 0; i < options.MaxConnections; i++)
             {
                 var receiveSocketEventArg = new SocketAsyncEventArgs();
                 this.readSocketBufferManager.SetBuffer(receiveSocketEventArg);
@@ -35,7 +33,7 @@
             }
         }
 
-        public MqttClientConnection GetAvailableConnection()
+        public MqttClientConnection GetConnection()
         {
             MqttClientConnection clientConnection;
             if (unconnectedClients.TryPop(out clientConnection))
@@ -46,7 +44,7 @@
             throw new Exception("Maximum number of connections reached");
         }
 
-        public void ReturnConnectionToPool(MqttClientConnection clientConnection)
+        public void ReturnConnection(MqttClientConnection clientConnection)
         {
             //TODO reset connection
             unconnectedClients.Push(clientConnection);

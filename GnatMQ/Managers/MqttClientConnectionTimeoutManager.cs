@@ -11,22 +11,22 @@
         private void KeepAliveThread(MqttClientConnection clientConnection)
         {
             int delta = 0;
-            int wait = clientConnection.keepAlivePeriod;
+            int wait = clientConnection.KeepAlivePeriod;
 
             // create event to signal that current thread is end
-            clientConnection.keepAliveEventEnd = new AutoResetEvent(false);
+            clientConnection.KeepAliveEventEnd = new AutoResetEvent(false);
 
-            while (clientConnection.isRunning)
+            while (clientConnection.IsRunning)
             {
                 // waiting...
-                clientConnection.keepAliveEvent.WaitOne(wait);
+                clientConnection.KeepAliveEvent.WaitOne(wait);
 
-                if (clientConnection.isRunning)
+                if (clientConnection.IsRunning)
                 {
-                    delta = Environment.TickCount - clientConnection.lastCommTime;
+                    delta = Environment.TickCount - clientConnection.LastCommunicationTime;
 
                     // if timeout exceeded ...
-                    if (delta >= clientConnection.keepAlivePeriod)
+                    if (delta >= clientConnection.KeepAlivePeriod)
                     {
                         // client must close connection
                         clientConnection.OnConnectionClosing();
@@ -34,13 +34,13 @@
                     else
                     {
                         // update waiting time
-                        wait = clientConnection.keepAlivePeriod - delta;
+                        wait = clientConnection.KeepAlivePeriod - delta;
                     }
                 }
             }
 
             // signal thread end
-            clientConnection.keepAliveEventEnd.Set();
+            clientConnection.KeepAliveEventEnd.Set();
         }
     }
 }

@@ -1,9 +1,6 @@
 ﻿namespace GnatMQForAzure.Handlers
 {
-    using System;
-
     using GnatMQForAzure.Events;
-    using GnatMQForAzure.Exceptions;
     using GnatMQForAzure.Managers;
     using GnatMQForAzure.Messages;
 
@@ -24,13 +21,13 @@
 
         public void ProcessInternalEventQueue(MqttClientConnection clientConnection)
         {
-            if (!clientConnection.isRunning)
+            if (!clientConnection.IsRunning)
             {
                 return;
             }
 
             InternalEvent internalEvent;
-            if (clientConnection.eventQueue.TryDequeue(out internalEvent))
+            if (clientConnection.EventQueue.TryDequeue(out internalEvent))
             {
                 MqttMsgBase msg = ((MsgInternalEvent)internalEvent).Message;
                 if (msg != null)
@@ -103,7 +100,7 @@
             }
 
             // all events for received messages dispatched, check if there is closing connection
-            if ((clientConnection.eventQueue.Count == 0) && clientConnection.isConnectionClosing)
+            if ((clientConnection.EventQueue.Count == 0) && clientConnection.IsConnectionClosing)
             {
                 // client raw disconnection
                 clientConnection.OnConnectionClosed();

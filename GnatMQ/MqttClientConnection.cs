@@ -18,25 +18,16 @@ Contributors:
 namespace GnatMQForAzure
 {
     using System;
-    using System.Collections;
     using System.Collections.Concurrent;
-    using System.IO;
-    using System.Net;
-    using System.Net.Security;
     using System.Net.Sockets;
-    using System.Security.Cryptography.X509Certificates;
     using System.Threading;
 
-    using GnatMQForAzure.Communication;
-    using GnatMQForAzure.Contracts;
     using GnatMQForAzure.Entities;
     using GnatMQForAzure.Entities.Enums;
     using GnatMQForAzure.Events;
-    using GnatMQForAzure.Exceptions;
     using GnatMQForAzure.Managers;
     using GnatMQForAzure.Messages;
     using GnatMQForAzure.Session;
-    using GnatMQForAzure.Utility;
 
     /// <summary>
     /// MQTT Client Connection
@@ -45,47 +36,14 @@ namespace GnatMQForAzure
     {
         #region Fields
 
-        // running status of threads
-        public bool isRunning;
-
-        // event for signaling synchronous receive
-        public AutoResetEvent syncEndReceiving;
-        
-        // message received
-        public MqttMsgBase msgReceived;
-
-        // exeption thrown during receiving
-        public Exception exReceiving;
-
-        // keep alive period (in ms)
-        public int keepAlivePeriod;
-        
-        // events for signaling on keep alive thread
-        public AutoResetEvent keepAliveEvent;
-
-        public AutoResetEvent keepAliveEventEnd;
-        
-        // last communication time in ticks
-        public int lastCommTime;
-
-        // channel to communicate over the network
-        public IMqttNetworkChannel channel;
-
         // inflight messages queue
-        public ConcurrentQueue<MqttMsgContext> inflightQueue;
-        
+        public readonly ConcurrentQueue<MqttMsgContext> InflightQueue;
+
         // internal queue for received messages about inflight messages
-        public ConcurrentQueue<MqttMsgBase> internalQueue;
-        
+        public readonly ConcurrentQueue<MqttMsgBase> InternalQueue;
+
         // internal queue for dispatching events
-        public ConcurrentQueue<InternalEvent> eventQueue;
-        // session
-
-        // current message identifier generated
-        private ushort messageIdCounter = 0;
-
-        // connection is closing due to peer
-        public bool isConnectionClosing;
+        public readonly ConcurrentQueue<InternalEvent> EventQueue;
 
         public readonly SocketAsyncEventArgs ReceiveSocketAsyncEventArgs;
 
@@ -93,9 +51,10 @@ namespace GnatMQForAzure
 
         public readonly int ReceiveSocketBufferSize;
 
-        public int PreviouslyRead;
+        public int PreviouslyReceivedBytes;
 
-        public MqttClientConnectionProcessingManager ProcessingManager;
+        // current message identifier generated
+        private ushort messageIdCounter = 0;
 
         #endregion
 
@@ -107,18 +66,9 @@ namespace GnatMQForAzure
             ReceiveSocketOffset = receiveSocketAsyncEventArgs.Offset;
             ReceiveSocketBufferSize = receiveSocketAsyncEventArgs.Count;
             ReceiveSocketAsyncEventArgs.UserToken = this;
-        }
-
-        /// <summary>
-        /// Constructor
-        /// </summary>
-        /// <param name="channel">Network channel for communication</param>
-        public MqttClientConnection(IMqttNetworkChannel channel)
-        {
+     
             // set default MQTT protocol version (default is 3.1.1)
             this.ProtocolVersion = MqttProtocolVersion.Version_3_1_1;
-
-            this.channel = channel;
 
             // reference to MQTT settings
             this.Settings = MqttSettings.Instance;
@@ -128,14 +78,14 @@ namespace GnatMQForAzure
             this.ClientId = null;
             this.CleanSession = true;
 
-            this.keepAliveEvent = new AutoResetEvent(false);
+            this.KeepAliveEvent = new AutoResetEvent(false);
 
             // queue for handling inflight messages (publishing and acknowledge)
-            this.inflightQueue = new ConcurrentQueue<MqttMsgContext>();
+            this.InflightQueue = new ConcurrentQueue<MqttMsgContext>();
 
             // queue for received message
-            this.eventQueue = new ConcurrentQueue<InternalEvent>();
-            this.internalQueue = new ConcurrentQueue<MqttMsgBase>();
+            this.EventQueue = new ConcurrentQueue<InternalEvent>();
+            this.InternalQueue = new ConcurrentQueue<MqttMsgBase>();
 
             // session
             this.Session = null;
@@ -206,6 +156,25 @@ namespace GnatMQForAzure
 
         #region Properties
 
+        // running status of threads
+        public bool IsRunning { get; set; }
+
+        // keep alive period (in ms)
+        public int KeepAlivePeriod { get; set; }
+
+        // events for signaling on keep alive thread
+        public AutoResetEvent KeepAliveEvent { get; set; }
+
+        public AutoResetEvent KeepAliveEventEnd { get; set; }
+
+        // last communication time in ticks
+        public int LastCommunicationTime { get; set; }
+
+        // connection is closing due to peer
+        public bool IsConnectionClosing { get; set; }
+
+        public MqttClientConnectionProcessingManager ProcessingManager { get; set; }
+
         /// <summary>
         /// Connection status between client and broker
         /// </summary>
@@ -262,7 +231,7 @@ namespace GnatMQForAzure
         {
             if (ProcessingManager != null)
             {
-                eventQueue.Enqueue(internalEvent);
+                EventQueue.Enqueue(internalEvent);
                 ProcessingManager.EnqueueClientConnectionWithInternalEventQueueToProcess(this);
             }
         }
@@ -271,7 +240,7 @@ namespace GnatMQForAzure
         {
             if (ProcessingManager != null)
             {
-                inflightQueue.Enqueue(inflightMessageContext);
+                InflightQueue.Enqueue(inflightMessageContext);
                 ProcessingManager.EnqueueClientConnectionWithInflightQueueToProcess(this);
             }
         }
@@ -286,9 +255,9 @@ namespace GnatMQForAzure
 
         public void OnConnectionClosing()
         {
-            if (!this.isConnectionClosing)
+            if (!this.IsConnectionClosing)
             {
-                this.isConnectionClosing = true;
+                this.IsConnectionClosing = true;
             }
         }
 
@@ -317,6 +286,34 @@ namespace GnatMQForAzure
         }
 
         /// <summary>
+        /// Generate the next message identifier
+        /// </summary>
+        /// <returns>Message identifier</returns>
+        public ushort GetMessageId()
+        {
+            // if 0 or max UInt16, it becomes 1 (first valid messageId)
+            this.messageIdCounter = ((this.messageIdCounter % ushort.MaxValue) != 0) ? (ushort)(this.messageIdCounter + 1) : (ushort)1;
+            return this.messageIdCounter;
+        }
+
+        /// <summary>
+        /// Load a given session
+        /// </summary>
+        /// <param name="session">MQTT Client session to load</param>
+        public void LoadSession(MqttClientSession session)
+        {
+            // if not clean session
+            if (!this.CleanSession)
+            {
+                // set the session ...
+                this.Session = session;
+
+                // ... and restore it
+                this.RestoreSession();
+            }
+        }
+
+        /// <summary>
         /// Restore session
         /// </summary>
         private void RestoreSession()
@@ -329,7 +326,7 @@ namespace GnatMQForAzure
                 {
                     foreach (MqttMsgContext msgContext in this.Session.InflightMessages.Values)
                     {
-                        this.inflightQueue.Enqueue(msgContext);
+                        this.InflightQueue.Enqueue(msgContext);
 
                         // if it is a PUBLISH message to publish
                         if ((msgContext.Message.Type == MqttMsgBase.MQTT_MSG_PUBLISH_TYPE)
@@ -371,62 +368,6 @@ namespace GnatMQForAzure
                 if (this.Session != null)
                     this.Session.Clear();
             }
-        }
-
-        /// <summary>
-        /// Load a given session
-        /// </summary>
-        /// <param name="session">MQTT Client session to load</param>
-        public void LoadSession(MqttClientSession session)
-        {
-            // if not clean session
-            if (!this.CleanSession)
-            {
-                // set the session ...
-                this.Session = session;
-                // ... and restore it
-                this.RestoreSession();
-            }
-        }
-
-        /// <summary>
-        /// Publish a message asynchronously
-        /// </summary>
-        /// <param name="topic">Message topic</param>
-        /// <param name="message">Message data (payload)</param>
-        /// <param name="qosLevel">QoS Level</param>
-        /// <param name="retain">Retain flag</param>
-        /// <returns>Message Id related to PUBLISH message</returns>
-        public ushort Publish(string topic, byte[] message, byte qosLevel, bool retain)
-        {
-            MqttMsgPublish publish = new MqttMsgPublish(topic, message, false, qosLevel, retain);
-            publish.MessageId = this.GetMessageId();
-
-            // enqueue message to publish into the inflight queue
-            // TODO FIND PROPER PLACE
-            bool enqueue = this.EnqueueInflight(publish, MqttMsgFlow.ToPublish);
-
-            // message enqueued
-            if (enqueue)
-            {
-                return publish.MessageId;
-            }
-            // infligh queue full, message not enqueued
-            else
-            {
-                throw new MqttClientException(MqttClientErrorCode.InflightQueueFull);
-            }
-        }
-
-        /// <summary>
-        /// Generate the next message identifier
-        /// </summary>
-        /// <returns>Message identifier</returns>
-        private ushort GetMessageId()
-        {
-            // if 0 or max UInt16, it becomes 1 (first valid messageId)
-            this.messageIdCounter = ((this.messageIdCounter % UInt16.MaxValue) != 0) ? (ushort)(this.messageIdCounter + 1) : (ushort)1;
-            return this.messageIdCounter;
         }
 
         /// <summary>

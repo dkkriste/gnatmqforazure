@@ -116,7 +116,7 @@ namespace GnatMQForAzure.Communication
             this.UserCertificateSelectionCallback = userCertificateSelectionCallback;
         }
 
-#region IMqttCommunicationLayer ...
+        #region IMqttCommunicationLayer ...
 
         // client connected event
         public event MqttClientConnectedEventHandler ClientConnected;
@@ -147,7 +147,7 @@ namespace GnatMQForAzure.Communication
             this.thread.Join();
         }
 
-#endregion
+        #endregion
 
         /// <summary>
         /// Listener thread for incoming connection requests
@@ -186,9 +186,9 @@ namespace GnatMQForAzure.Communication
                         channel.Accept();
 
                         // handling channel for connected client
-                        MqttClientConnection clientConnection = new MqttClientConnection(channel);
-                        // raise client raw connection event
-                        this.OnClientConnected(clientConnection);
+                        //MqttClientConnection clientConnection = new MqttClientConnection(channel);
+                        //// raise client raw connection event
+                        //this.OnClientConnected(clientConnection);
                     }
                 }
                 catch (Exception)

@@ -1,30 +1,27 @@
 ﻿namespace GnatMQForAzure.Handlers
 {
     using System;
-    using System.IO;
     using System.Linq;
-    using System.Net.Sockets;
 
     using GnatMQForAzure.Entities;
     using GnatMQForAzure.Events;
     using GnatMQForAzure.Exceptions;
     using GnatMQForAzure.Managers;
     using GnatMQForAzure.Messages;
-    using GnatMQForAzure.Utility;
 
-    public class MqttClientConnectionReceiveManager
+    public class MqttClientConnectionIncomingMessageManager
     {
         private readonly MqttOutgoingMessageManager outgoingMessageManager;
 
         public void ProcessReceivedMessage(MqttRawMessage rawMessage)
         {
-            if (!rawMessage.ClientConnection.isRunning)
+            if (!rawMessage.ClientConnection.IsRunning)
             {
                 return;
             }
 
             // update last message received ticks
-            rawMessage.ClientConnection.lastCommTime = Environment.TickCount;
+            rawMessage.ClientConnection.LastCommunicationTime = Environment.TickCount;
             
             // extract message type from received byte
             byte msgType = (byte)((rawMessage.MessageType & MqttMsgBase.MSG_TYPE_MASK) >> MqttMsgBase.MSG_TYPE_OFFSET);
@@ -96,7 +93,26 @@
             }
         }
 
-        private bool EnqueueInflight(MqttClientConnection clientConnection, MqttMsgBase msg, MqttMsgFlow flow)
+        /// <summary>
+        /// Publish a message asynchronously
+        /// </summary>
+        /// <param name="topic">Message topic</param>
+        /// <param name="message">Message data (payload)</param>
+        /// <param name="qosLevel">QoS Level</param>
+        /// <param name="retain">Retain flag</param>
+        /// <returns>Message Id related to PUBLISH message</returns>
+        public ushort Publish(MqttClientConnection clientConnection, string topic, byte[] message, byte qosLevel, bool retain)
+        {
+            MqttMsgPublish publish = new MqttMsgPublish(topic, message, false, qosLevel, retain);
+            publish.MessageId = clientConnection.GetMessageId();
+
+            // enqueue message to publish into the inflight queue
+            EnqueueInflight(clientConnection, publish, MqttMsgFlow.ToPublish);
+
+            return publish.MessageId;
+        }
+
+        private void EnqueueInflight(MqttClientConnection clientConnection, MqttMsgBase msg, MqttMsgFlow flow)
         {
             // enqueue is needed (or not)
             bool enqueue = true;
@@ -111,7 +127,7 @@
                 //        to/from client and message id could be the same (one tracked by broker and the other by client)
                 MqttClientConnection.MqttMsgContextFinder msgCtxFinder =
                     new MqttClientConnection.MqttMsgContextFinder(msg.MessageId, MqttMsgFlow.ToAcknowledge);
-                MqttMsgContext msgCtx = (MqttMsgContext)clientConnection.inflightQueue.FirstOrDefault(msgCtxFinder.Find);
+                MqttMsgContext msgCtx = (MqttMsgContext)clientConnection.InflightQueue.FirstOrDefault(msgCtxFinder.Find);
 
                 // the PUBLISH message is alredy in the inflight queue, we don't need to re-enqueue but we need
                 // to change state to re-send PUBREC
@@ -194,8 +210,6 @@
                     }
                 }
             }
-
-            return enqueue;
         }
 
         private void EnqueueInternal(MqttClientConnection clientConnection, MqttMsgBase msg)
@@ -214,7 +228,7 @@
                 //        to/from client and message id could be the same (one tracked by broker and the other by client)
                 MqttClientConnection.MqttMsgContextFinder msgCtxFinder =
                     new MqttClientConnection.MqttMsgContextFinder(msg.MessageId, MqttMsgFlow.ToAcknowledge);
-                MqttMsgContext msgCtx = (MqttMsgContext)clientConnection.inflightQueue.FirstOrDefault(msgCtxFinder.Find);
+                MqttMsgContext msgCtx = (MqttMsgContext)clientConnection.InflightQueue.FirstOrDefault(msgCtxFinder.Find);
 
                 // the PUBLISH message isn't in the inflight queue, it was already processed so
                 // we need to re-send PUBCOMP only
@@ -235,7 +249,7 @@
                 //        to/from client and message id could be the same (one tracked by broker and the other by client)
                 MqttClientConnection.MqttMsgContextFinder msgCtxFinder =
                     new MqttClientConnection.MqttMsgContextFinder(msg.MessageId, MqttMsgFlow.ToPublish);
-                MqttMsgContext msgCtx = (MqttMsgContext)clientConnection.inflightQueue.FirstOrDefault(msgCtxFinder.Find);
+                MqttMsgContext msgCtx = (MqttMsgContext)clientConnection.InflightQueue.FirstOrDefault(msgCtxFinder.Find);
 
                 // the PUBLISH message isn't in the inflight queue, it was already sent so we need to ignore clientConnection PUBCOMP
                 if (msgCtx == null)
@@ -254,7 +268,7 @@
                 //        to/from client and message id could be the same (one tracked by broker and the other by client)
                 MqttClientConnection.MqttMsgContextFinder msgCtxFinder =
                     new MqttClientConnection.MqttMsgContextFinder(msg.MessageId, MqttMsgFlow.ToPublish);
-                MqttMsgContext msgCtx = (MqttMsgContext)clientConnection.inflightQueue.FirstOrDefault(msgCtxFinder.Find);
+                MqttMsgContext msgCtx = (MqttMsgContext)clientConnection.InflightQueue.FirstOrDefault(msgCtxFinder.Find);
 
                 // the PUBLISH message isn't in the inflight queue, it was already sent so we need to ignore rawMessage.ClientConnection PUBREC
                 if (msgCtx == null)
@@ -265,7 +279,7 @@
 
             if (enqueue)
             {
-                clientConnection.internalQueue.Enqueue(msg);
+                clientConnection.InternalQueue.Enqueue(msg);
             }
         }
     }

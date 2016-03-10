@@ -34,8 +34,6 @@ namespace GnatMQForAzure
         // broker need to receive the first message (CONNECT)
         // within a reasonable amount of time after TCP/IP connection 
         public const int MQTT_CONNECT_TIMEOUT = 30000;
-        // default inflight queue size
-        public const int MQTT_MAX_INFLIGHT_QUEUE_SIZE = int.MaxValue;
 
         // singleton instance
         private static MqttSettings instance;
@@ -51,7 +49,6 @@ namespace GnatMQForAzure
             this.AttemptsOnRetry = MQTT_ATTEMPTS_RETRY;
             this.DelayOnRetry = MQTT_DELAY_RETRY;
             this.TimeoutOnConnection = MQTT_CONNECT_TIMEOUT;
-            this.InflightQueueSize = MQTT_MAX_INFLIGHT_QUEUE_SIZE;
         }
 
         /// <summary>
@@ -99,10 +96,5 @@ namespace GnatMQForAzure
         /// Delay on retry
         /// </summary>
         public int DelayOnRetry { get; internal set; }
-
-        /// <summary>
-        /// Inflight queue size
-        /// </summary>
-        public int InflightQueueSize { get; set; }
     }
 }

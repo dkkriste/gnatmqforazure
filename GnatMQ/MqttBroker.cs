@@ -17,22 +17,16 @@ Contributors:
 
 namespace GnatMQForAzure
 {
-    using System;
     using System.Collections.Concurrent;
-    using System.Collections.Generic;
-    using System.Linq;
     using System.Net.Security;
     using System.Security.Cryptography.X509Certificates;
-    using System.Text;
 
     using GnatMQForAzure.Communication;
     using GnatMQForAzure.Contracts;
+    using GnatMQForAzure.Entities;
     using GnatMQForAzure.Entities.Delegates;
     using GnatMQForAzure.Entities.Enums;
-    using GnatMQForAzure.Exceptions;
     using GnatMQForAzure.Managers;
-    using GnatMQForAzure.Messages;
-    using GnatMQForAzure.Session;
 
     /// <summary>
     /// MQTT broker business logic
@@ -44,6 +38,12 @@ namespace GnatMQForAzure
 
         // clients connected list
         private ConcurrentDictionary<string, MqttClientConnection> allConnectedClients;
+
+        private MqttProcessingLoadbalancer processingLoadbalancer;
+
+        private MqttClientConnectionProcessingManager[] processingManagers;
+
+        private MqttAsyncTcpSocketListener socketListener;
 
         // reference to publisher manager
         private MqttPublishManager publishManager;
@@ -108,12 +108,13 @@ namespace GnatMQForAzure
         /// <param name="settings">Broker settings</param>
         public MqttBroker(IMqttCommunicationLayer commLayer, MqttSettings settings)
         {
+            var options = new MqttOptions();
+            ILogger logger = null;
             // MQTT broker settings
             this.settings = settings;
 
             // MQTT communication layer
             this.commLayer = commLayer;
-            this.commLayer.ClientConnected += commLayer_ClientConnected;           
 
             // create managers (publisher, subscriber, session and UAC)
             this.subscriberManager = new MqttSubscriberManager();
@@ -122,6 +123,15 @@ namespace GnatMQForAzure
             this.uacManager = new MqttUacManager();
 
             this.allConnectedClients = new ConcurrentDictionary<string, MqttClientConnection>();
+
+            var numberOfProcessingManagersNeeded = options.MaxConnections / options.ConnectionsPrProcessingManager;
+            this.processingManagers = new MqttClientConnectionProcessingManager[numberOfProcessingManagersNeeded];
+            for (var i = 0; i < processingManagers.Length; i++)
+            {
+                processingManagers[i] = new MqttClientConnectionProcessingManager(logger);
+            }
+
+            this.processingLoadbalancer = new MqttProcessingLoadbalancer(logger, processingManagers);
         }
 
         /// <summary>
@@ -131,6 +141,11 @@ namespace GnatMQForAzure
         {
             this.commLayer.Start();
             this.publishManager.Start();
+
+            foreach (var processingManager in processingManagers)
+            {
+                processingManager.Start();
+            }
         }
 
         /// <summary>
@@ -140,6 +155,11 @@ namespace GnatMQForAzure
         {
             this.commLayer.Stop();
             this.publishManager.Stop();
+
+            foreach (var processingManager in processingManagers)
+            {
+                processingManager.Stop();
+            }
 
             // TODO close connection with all clients
             //foreach (MqttClientConnection client in this.allConnectedClients)

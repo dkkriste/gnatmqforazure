@@ -2,22 +2,23 @@
 {
     using System;
 
+    using GnatMQForAzure.Communication;
     using GnatMQForAzure.Entities.Enums;
     using GnatMQForAzure.Exceptions;
     using GnatMQForAzure.Messages;
 
     public class MqttOutgoingMessageManager
     {
-        /// <summary>
-        /// Send CONNACK message to the client (connection accepted or not)
-        /// </summary>
-        /// <param name="connect">CONNECT message with all client information</param>
-        /// <param name="returnCode">Return code for CONNACK message</param>
-        /// <param name="clientId">If not null, client id assigned by broker</param>
-        /// <param name="sessionPresent">Session present on the broker</param>
+        private readonly MqttAsyncTcpSender asyncTcpSender;
+
+        public MqttOutgoingMessageManager(MqttAsyncTcpSender asyncTcpSender)
+        {
+            this.asyncTcpSender = asyncTcpSender;
+        }
+
         public void Connack(MqttClientConnection clientConnection, MqttMsgConnect connect, byte returnCode, string clientId, bool sessionPresent)
         {
-            clientConnection.lastCommTime = Environment.TickCount;
+            clientConnection.LastCommunicationTime = Environment.TickCount;
 
             MqttMsgConnack connack = new MqttMsgConnack();
             connack.ReturnCode = returnCode;
@@ -41,11 +42,11 @@
                 clientConnection.WillMessage = connect.WillMessage;
                 clientConnection.WillQosLevel = connect.WillQosLevel;
 
-                clientConnection.keepAlivePeriod = connect.KeepAlivePeriod * 1000; // convert in ms
+                clientConnection.KeepAlivePeriod = connect.KeepAlivePeriod * 1000; // convert in ms
                 // broker has a tolerance of 1.5 specified keep alive period
-                clientConnection.keepAlivePeriod += (clientConnection.keepAlivePeriod / 2);
+                clientConnection.KeepAlivePeriod += (clientConnection.KeepAlivePeriod / 2);
 
-                clientConnection.isConnectionClosing = false;
+                clientConnection.IsConnectionClosing = false;
                 clientConnection.IsConnected = true;
             }
             // connection refused, close TCP/IP channel
@@ -55,11 +56,6 @@
             }
         }
 
-        /// <summary>
-        /// Send SUBACK message to the client
-        /// </summary>
-        /// <param name="messageId">Message Id for the SUBSCRIBE message that is being acknowledged</param>
-        /// <param name="grantedQosLevels">Granted QoS Levels</param>
         public void Suback(MqttClientConnection clientConnection, ushort messageId, byte[] grantedQosLevels)
         {
             MqttMsgSuback suback = new MqttMsgSuback();
@@ -69,10 +65,6 @@
             this.Send(clientConnection, suback);
         }
 
-        /// <summary>
-        /// Send UNSUBACK message to the client
-        /// </summary>
-        /// <param name="messageId">Message Id for the UNSUBSCRIBE message that is being acknowledged</param>
         public void Unsuback(MqttClientConnection clientConnection, ushort messageId)
         {
             MqttMsgUnsuback unsuback = new MqttMsgUnsuback();
@@ -116,16 +108,11 @@
             Send(clientConnection, pingresp);
         }
 
-        /// <summary>
-        /// Send a message
-        /// </summary>
-        /// <param name="msgBytes">Message bytes</param>
         public void Send(MqttClientConnection clientConnection, byte[] msgBytes)
         {
             try
             {
-                // send message
-                clientConnection.channel.Send(msgBytes);
+                asyncTcpSender.Send(clientConnection.ReceiveSocketAsyncEventArgs.AcceptSocket, msgBytes);
             }
             catch (Exception e)
             {
@@ -133,10 +120,6 @@
             }
         }
 
-        /// <summary>
-        /// Send a message
-        /// </summary>
-        /// <param name="msg">Message</param>
         public void Send(MqttClientConnection clientConnection, MqttMsgBase msg)
         {
             this.Send(clientConnection, msg.GetBytes((byte)clientConnection.ProtocolVersion));

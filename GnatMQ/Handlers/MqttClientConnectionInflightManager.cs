@@ -15,7 +15,7 @@
 
         public void ProcessInflightQueue(MqttClientConnection clientConnection)
         {
-            if (!clientConnection.isRunning)
+            if (!clientConnection.IsRunning)
             {
                 return;
             }
@@ -36,16 +36,16 @@
 
             // a message inflight could be re-enqueued but we have to
             // analyze it only just one time for cycle
-            int count = clientConnection.inflightQueue.Count;
+            int count = clientConnection.InflightQueue.Count;
             // process all inflight queued messages
-            while (count > 0 && clientConnection.isRunning)
+            while (count > 0 && clientConnection.IsRunning)
             {
                 count--;
                 msgReceived = null;
 
                 // dequeue message context from queue
                 MqttMsgContext msgContext;
-                if (!clientConnection.inflightQueue.TryDequeue(out msgContext))
+                if (!clientConnection.InflightQueue.TryDequeue(out msgContext))
                 {
                     return;
                 }
@@ -115,7 +115,7 @@
             if ((msgReceived != null) && !msgReceivedProcessed)
             {
                 MqttMsgBase dequeuedMsg;
-                clientConnection.internalQueue.TryDequeue(out dequeuedMsg);
+                clientConnection.InternalQueue.TryDequeue(out dequeuedMsg);
             }
         }
 
@@ -161,7 +161,7 @@
             }
 
             MqttMsgBase msgReceived;
-            if (!clientConnection.internalQueue.TryPeek(out msgReceived))
+            if (!clientConnection.InternalQueue.TryPeek(out msgReceived))
             {
                 return null;
             }
@@ -176,7 +176,7 @@
                 if (msgReceived.MessageId == msgInflight.MessageId)
                 {
                     MqttMsgBase dequeuedMsg;
-                    clientConnection.internalQueue.TryDequeue(out dequeuedMsg);
+                    clientConnection.InternalQueue.TryDequeue(out dequeuedMsg);
                     acknowledge = true;
                     msgReceivedProcessed = true;
 
@@ -201,7 +201,7 @@
                 if (msgReceived.MessageId == msgInflight.MessageId)
                 {
                     MqttMsgBase dequeuedMsg;
-                    clientConnection.internalQueue.TryDequeue(out dequeuedMsg);
+                    clientConnection.InternalQueue.TryDequeue(out dequeuedMsg);
                     acknowledge = true;
                     msgReceivedProcessed = true;
 
@@ -265,7 +265,7 @@
             }
 
             MqttMsgBase msgReceived;
-            if (!clientConnection.internalQueue.TryPeek(out msgReceived))
+            if (!clientConnection.InternalQueue.TryPeek(out msgReceived))
             {
                 return null;
             }
@@ -280,7 +280,7 @@
                 {
                     // received message processed
                     MqttMsgBase dequeuedMsg;
-                    clientConnection.internalQueue.TryDequeue(out dequeuedMsg);
+                    clientConnection.InternalQueue.TryDequeue(out dequeuedMsg);
                     msgReceivedProcessed = true;
 
 
@@ -327,7 +327,7 @@
             }
 
             MqttMsgBase msgReceived;
-            if (!clientConnection.internalQueue.TryPeek(out msgReceived))
+            if (!clientConnection.InternalQueue.TryPeek(out msgReceived))
             {
                 return null;
             }
@@ -343,7 +343,7 @@
                 {
                     // received message processed
                     MqttMsgBase dequeuedMsg;
-                    clientConnection.internalQueue.TryDequeue(out dequeuedMsg);
+                    clientConnection.InternalQueue.TryDequeue(out dequeuedMsg);
                     acknowledge = true;
                     msgReceivedProcessed = true;
 
@@ -426,7 +426,7 @@
             }
 
             MqttMsgBase msgReceived;
-            if (!clientConnection.internalQueue.TryPeek(out msgReceived))
+            if (!clientConnection.InternalQueue.TryPeek(out msgReceived))
             {
                 return null;
             }
@@ -447,7 +447,7 @@
             {
                 // received message processed
                 MqttMsgBase dequeuedMsg;
-                clientConnection.internalQueue.TryDequeue(out dequeuedMsg);
+                clientConnection.InternalQueue.TryDequeue(out dequeuedMsg);
                 acknowledge = true;
                 msgReceivedProcessed = true;
 
