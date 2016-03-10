@@ -69,6 +69,7 @@
     <Compile Include="Managers\MqttClientConnectionManager.cs" />
     <Compile Include="Handlers\MqttClientConnectionReceiveManager.cs" />
     <Compile Include="Managers\MqttClientConnectionTimeoutManager.cs" />
+    <Compile Include="Managers\MqttOutgoingMessageManager.cs" />
     <Compile Include="Managers\MqttRawMessageManager.cs" />
     <Compile Include="Managers\MqttSubscription.cs" />
     <Compile Include="Utility\MqttSubscriptionComparer.cs" />

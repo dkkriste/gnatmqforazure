@@ -36,6 +36,8 @@
 
         private readonly MqttClientConnectionInternalEventManager internalEventManager;
 
+        private readonly MqttOutgoingMessageManager outgoingMessageManager;
+
         private readonly BlockingCollection<MqttRawMessage> rawMessageQueue;
 
         private readonly BlockingCollection<MqttClientConnection> clientConnectionsWithInflightQueuesToProcess;
@@ -44,6 +46,8 @@
 
         private bool isRunning;
 
+        private int numberOfConnectedClients;
+
         public MqttClientConnectionProcessingManager(ILogger logger)
         {
             this.logger = logger;
@@ -51,6 +55,8 @@
             clientConnectionsWithInflightQueuesToProcess = new BlockingCollection<MqttClientConnection>();
             clientConnectionsWithInternalEventQueuesToProcess = new BlockingCollection<MqttClientConnection>();
         }
+
+        public int ConnectedClients => numberOfConnectedClients;
 
         public void Start()
         {
@@ -138,10 +144,6 @@
 
         void commLayer_ClientConnected(object sender, MqttClientConnectedEventArgs e)
         {
-            // register event handlers from client
-            e.ClientConnection.MqttMsgConnected += Client_MqttMsgConnected;
-            e.ClientConnection.ConnectionClosed += Client_ConnectionClosed;
-
             // start client threads
             Open(e.ClientConnection);
         }
@@ -149,7 +151,16 @@
         private void Open(MqttClientConnection clientConnection)
         {
             clientConnection.isRunning = true;
+            clientConnection.ProcessingManager = this;
             Task.Factory.StartNew(() => CheckForClientTimeout(clientConnection));
+        }
+
+        private void Close(MqttClientConnection clientConnection)
+        {
+            // stop receiving thread
+            clientConnection.isRunning = false;
+
+            clientConnection.IsConnected = false;
         }
 
         private async void CheckForClientTimeout(MqttClientConnection clientConnection)
@@ -165,20 +176,20 @@
             }
         }
 
-        private void Client_MqttMsgConnected(object sender, MqttMsgConnectEventArgs e)
+        public void OnMqttMsgConnected(MqttClientConnection clientConnection, MqttMsgConnect message)
         {
+            clientConnection.ProtocolVersion = (MqttProtocolVersion)message.ProtocolVersion;
+
             // [v3.1.1] session present flag
             bool sessionPresent = false;
             // [v3.1.1] generated client id for client who provides client id zero bytes length
             string clientId = null;
 
-            MqttClientConnection clientConnection = (MqttClientConnection)sender;
-
             // verify message to determine CONNACK message return code to the client
-            byte returnCode = this.MqttConnectVerify(e.Message);
+            byte returnCode = this.MqttConnectVerify(message);
 
             // [v3.1.1] if client id is zero length, the broker assigns a unique identifier to it
-            clientId = (e.Message.ClientId.Length != 0) ? e.Message.ClientId : Guid.NewGuid().ToString();
+            clientId = (message.ClientId.Length != 0) ? message.ClientId : Guid.NewGuid().ToString();
 
             // connection "could" be accepted
             if (returnCode == MqttMsgConnack.CONN_ACCEPTED)
@@ -189,7 +200,7 @@
                 // force connection close to the existing client (MQTT protocol)
                 if (clientConnectionConnected != null)
                 {
-                    this.CloseClient(clientConnectionConnected);
+                    this.OnConnectionClosed(clientConnectionConnected);
                 }
 
                 // add client to the collection
@@ -200,7 +211,7 @@
             if (returnCode == MqttMsgConnack.CONN_ACCEPTED)
             {
                 // check if not clean session and try to recovery a session
-                if (!e.Message.CleanSession)
+                if (!message.CleanSession)
                 {
                     // create session for the client
                     MqttClientSession clientSession = new MqttClientSession(clientId);
@@ -217,7 +228,7 @@
                     }
 
                     // send CONNACK message to the client
-                    clientConnection.Connack(e.Message, returnCode, clientId, sessionPresent);
+                    outgoingMessageManager.Connack(clientConnection, message, returnCode, clientId, sessionPresent);
 
                     // load/inject session to the client
                     clientConnection.LoadSession(clientSession);
@@ -255,7 +266,7 @@
                 else
                 {
                     // send CONNACK message to the client
-                    clientConnection.Connack(e.Message, returnCode, clientId, sessionPresent);
+                    outgoingMessageManager.Connack(clientConnection, message, returnCode, clientId, sessionPresent);
 
                     this.sessionManager.ClearSession(clientId);
                 }
@@ -263,24 +274,14 @@
             else
             {
                 // send CONNACK message to the client
-                clientConnection.Connack(e.Message, returnCode, clientId, sessionPresent);
+                outgoingMessageManager.Connack(clientConnection, message, returnCode, clientId, sessionPresent);
             }
         }
 
-        private void Client_ConnectionClosed(object sender, EventArgs e)
+        public void OnConnectionClosed(MqttClientConnection clientConnection)
         {
-            MqttClientConnection client = (MqttClientConnection)sender;
+            
 
-            // close the client
-            CloseClient(client);
-        }
-
-        /// <summary>
-        /// Close a client
-        /// </summary>
-        /// <param name="clientConnection">Client to close</param>
-        private void CloseClient(MqttClientConnection clientConnection)
-        {
             // if client is connected
             MqttClientConnection connectedClient;
             if (clientConnection.IsConnected
@@ -313,7 +314,7 @@
                 this.subscriberManager.Unsubscribe(clientConnection);
 
                 // close the client
-                clientConnection.Close();
+                Close(clientConnection);
             }
             else
             {

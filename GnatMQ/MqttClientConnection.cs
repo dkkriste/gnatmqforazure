@@ -199,14 +199,8 @@ namespace GnatMQForAzure
         // event for unsubscribed topic
         public event MqttMsgUnsubscribedEventHandler MqttMsgUnsubscribed;
         
-        // event for CONNECT message received
-        public event MqttMsgConnectEventHandler MqttMsgConnected;
-        
         // event for DISCONNECT message received
         public event MqttMsgDisconnectEventHandler MqttMsgDisconnected;
-
-        // event for peer/client disconnection
-        public event ConnectionClosedEventHandler ConnectionClosed;
 
         #endregion
 
@@ -215,37 +209,37 @@ namespace GnatMQForAzure
         /// <summary>
         /// Connection status between client and broker
         /// </summary>
-        public bool IsConnected { get; private set; }
+        public bool IsConnected { get; set; }
 
         /// <summary>
         /// Client identifier
         /// </summary>
-        public string ClientId { get; private set; }
+        public string ClientId { get; set; }
 
         /// <summary>
         /// Clean session flag
         /// </summary>
-        public bool CleanSession { get; private set; }
+        public bool CleanSession { get; set; }
 
         /// <summary>
         /// Will flag
         /// </summary>
-        public bool WillFlag { get; private set; }
+        public bool WillFlag { get; set; }
 
         /// <summary>
         /// Will QOS level
         /// </summary>
-        public byte WillQosLevel { get; private set; }
+        public byte WillQosLevel { get; set; }
 
         /// <summary>
         /// Will topic
         /// </summary>
-        public string WillTopic { get; private set; }
+        public string WillTopic { get; set; }
 
         /// <summary>
         /// Will message
         /// </summary>
-        public string WillMessage { get; private set; }
+        public string WillMessage { get; set; }
 
         /// <summary>
         /// MQTT protocol version
@@ -263,132 +257,6 @@ namespace GnatMQForAzure
         public MqttSettings Settings { get; private set; }
 
         #endregion
-
-        /// <summary>
-        /// MqttClient initialization
-        /// </summary>
-        /// <param name="brokerHostName">Broker Host Name or IP Address</param>
-        /// <param name="brokerPort">Broker port</param>
-        /// <param name="secure">>Using secure connection</param>
-        /// <param name="caCert">CA certificate for secure connection</param>
-        /// <param name="clientCert">Client certificate</param>
-        /// <param name="sslProtocol">SSL/TLS protocol version</param>
-        /// <param name="userCertificateSelectionCallback">A RemoteCertificateValidationCallback delegate responsible for validating the certificate supplied by the remote party</param>
-        /// <param name="userCertificateValidationCallback">A LocalCertificateSelectionCallback delegate responsible for selecting the certificate used for authentication</param>
-
-        public void Close()
-        {
-            // stop receiving thread
-            this.isRunning = false;
-
-            // close network channel
-            this.channel.Close();
-
-            this.IsConnected = false;
-        }
-
-        /// <summary>
-        /// Send CONNACK message to the client (connection accepted or not)
-        /// </summary>
-        /// <param name="connect">CONNECT message with all client information</param>
-        /// <param name="returnCode">Return code for CONNACK message</param>
-        /// <param name="clientId">If not null, client id assigned by broker</param>
-        /// <param name="sessionPresent">Session present on the broker</param>
-        public void Connack(MqttMsgConnect connect, byte returnCode, string clientId, bool sessionPresent)
-        {
-            this.lastCommTime = 0;
-
-            // create CONNACK message and ...
-            MqttMsgConnack connack = new MqttMsgConnack();
-            connack.ReturnCode = returnCode;
-            // [v3.1.1] session present flag
-            if (this.ProtocolVersion == MqttProtocolVersion.Version_3_1_1)
-                connack.SessionPresent = sessionPresent;
-            // ... send it to the client
-            this.Send(connack);
-
-            // connection accepted, start keep alive thread checking
-            if (connack.ReturnCode == MqttMsgConnack.CONN_ACCEPTED)
-            {
-                // [v3.1.1] if client id isn't null, the CONNECT message has a cliend id with zero bytes length
-                //          and broker assigned a unique identifier to the client
-                this.ClientId = (clientId == null) ? connect.ClientId : clientId;
-                this.CleanSession = connect.CleanSession;
-                this.WillFlag = connect.WillFlag;
-                this.WillTopic = connect.WillTopic;
-                this.WillMessage = connect.WillMessage;
-                this.WillQosLevel = connect.WillQosLevel;
-
-                this.keepAlivePeriod = connect.KeepAlivePeriod * 1000; // convert in ms
-                // broker has a tolerance of 1.5 specified keep alive period
-                this.keepAlivePeriod += (this.keepAlivePeriod / 2);
-
-                this.isConnectionClosing = false;
-                this.IsConnected = true;
-            }
-            // connection refused, close TCP/IP channel
-            else
-            {
-                this.Close();
-            }
-        }
-
-        /// <summary>
-        /// Send SUBACK message to the client
-        /// </summary>
-        /// <param name="messageId">Message Id for the SUBSCRIBE message that is being acknowledged</param>
-        /// <param name="grantedQosLevels">Granted QoS Levels</param>
-        public void Suback(ushort messageId, byte[] grantedQosLevels)
-        {
-            MqttMsgSuback suback = new MqttMsgSuback();
-            suback.MessageId = messageId;
-            suback.GrantedQoSLevels = grantedQosLevels;
-
-            this.Send(suback);
-        }
-
-        /// <summary>
-        /// Send UNSUBACK message to the client
-        /// </summary>
-        /// <param name="messageId">Message Id for the UNSUBSCRIBE message that is being acknowledged</param>
-        public void Unsuback(ushort messageId)
-        {
-            MqttMsgUnsuback unsuback = new MqttMsgUnsuback();
-            unsuback.MessageId = messageId;
-
-            this.Send(unsuback);
-        }
-
-        /// <summary>
-        /// Publish a message asynchronously
-        /// </summary>
-        /// <param name="topic">Message topic</param>
-        /// <param name="message">Message data (payload)</param>
-        /// <param name="qosLevel">QoS Level</param>
-        /// <param name="retain">Retain flag</param>
-        /// <returns>Message Id related to PUBLISH message</returns>
-        public ushort Publish(string topic, byte[] message, byte qosLevel, bool retain)
-        {
-            //MqttMsgPublish publish = new MqttMsgPublish(topic, message, false, qosLevel, retain);
-            //publish.MessageId = this.GetMessageId();
-
-            //// enqueue message to publish into the inflight queue
-            //// TODO FIND PROPER PLACE
-            //bool enqueue = this.EnqueueInflight(publish, MqttMsgFlow.ToPublish);
-
-            //// message enqueued
-            //if (enqueue)
-            //{
-            //    return publish.MessageId;
-            //}
-            //// infligh queue full, message not enqueued
-            //else
-            //{
-            //    throw new MqttClientException(MqttClientErrorCode.InflightQueueFull);
-            //}
-
-            throw new NotImplementedException("See todo");
-        }
 
         public void EnqueueInternalEvent(InternalEvent internalEvent)
         {
@@ -416,9 +284,6 @@ namespace GnatMQForAzure
             }
         }
 
-        /// <summary>
-        /// Wrapper method for raising closing connection event
-        /// </summary>
         public void OnConnectionClosing()
         {
             if (!this.isConnectionClosing)
@@ -427,22 +292,14 @@ namespace GnatMQForAzure
             }
         }
 
-
-        /// <summary>
-        /// Wrapper method for raising CONNECT message event
-        /// </summary>
         public void OnMqttMsgConnected(MqttMsgConnect connect)
         {
-            if (this.MqttMsgConnected != null)
+            if (ProcessingManager != null)
             {
-                this.ProtocolVersion = (MqttProtocolVersion)connect.ProtocolVersion;
-                this.MqttMsgConnected(this, new MqttMsgConnectEventArgs(connect));
+                ProcessingManager.OnMqttMsgConnected(this, connect);
             }
         }
 
-        /// <summary>
-        /// Wrapper method for raising DISCONNECT message event
-        /// </summary>
         public void OnMqttMsgDisconnected()
         {
             if (this.MqttMsgDisconnected != null)
@@ -451,41 +308,12 @@ namespace GnatMQForAzure
             }
         }
 
-        /// <summary>
-        /// Wrapper method for peer/client disconnection
-        /// </summary>
         public void OnConnectionClosed()
         {
-            if (this.ConnectionClosed != null)
+            if (ProcessingManager != null)
             {
-                this.ConnectionClosed(this, EventArgs.Empty);
+                ProcessingManager.OnConnectionClosed(this);
             }
-        }
-
-        /// <summary>
-        /// Send a message
-        /// </summary>
-        /// <param name="msgBytes">Message bytes</param>
-        public void Send(byte[] msgBytes)
-        {
-            try
-            {
-                // send message
-                this.channel.Send(msgBytes);
-            }
-            catch (Exception e)
-            {
-                throw new MqttCommunicationException(e);
-            }
-        }
-
-        /// <summary>
-        /// Send a message
-        /// </summary>
-        /// <param name="msg">Message</param>
-        public void Send(MqttMsgBase msg)
-        {
-            this.Send(msg.GetBytes((byte)this.ProtocolVersion));
         }
 
         /// <summary>
@@ -545,7 +373,6 @@ namespace GnatMQForAzure
             }
         }
 
-
         /// <summary>
         /// Load a given session
         /// </summary>
@@ -559,6 +386,35 @@ namespace GnatMQForAzure
                 this.Session = session;
                 // ... and restore it
                 this.RestoreSession();
+            }
+        }
+
+        /// <summary>
+        /// Publish a message asynchronously
+        /// </summary>
+        /// <param name="topic">Message topic</param>
+        /// <param name="message">Message data (payload)</param>
+        /// <param name="qosLevel">QoS Level</param>
+        /// <param name="retain">Retain flag</param>
+        /// <returns>Message Id related to PUBLISH message</returns>
+        public ushort Publish(string topic, byte[] message, byte qosLevel, bool retain)
+        {
+            MqttMsgPublish publish = new MqttMsgPublish(topic, message, false, qosLevel, retain);
+            publish.MessageId = this.GetMessageId();
+
+            // enqueue message to publish into the inflight queue
+            // TODO FIND PROPER PLACE
+            bool enqueue = this.EnqueueInflight(publish, MqttMsgFlow.ToPublish);
+
+            // message enqueued
+            if (enqueue)
+            {
+                return publish.MessageId;
+            }
+            // infligh queue full, message not enqueued
+            else
+            {
+                throw new MqttClientException(MqttClientErrorCode.InflightQueueFull);
             }
         }
 

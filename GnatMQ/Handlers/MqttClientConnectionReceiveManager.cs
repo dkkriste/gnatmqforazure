@@ -8,11 +8,14 @@
     using GnatMQForAzure.Entities;
     using GnatMQForAzure.Events;
     using GnatMQForAzure.Exceptions;
+    using GnatMQForAzure.Managers;
     using GnatMQForAzure.Messages;
     using GnatMQForAzure.Utility;
 
     public class MqttClientConnectionReceiveManager
     {
+        private readonly MqttOutgoingMessageManager outgoingMessageManager;
+
         public void ProcessReceivedMessage(MqttRawMessage rawMessage)
         {
             if (!rawMessage.ClientConnection.isRunning)
@@ -35,9 +38,7 @@
 
                 case MqttMsgBase.MQTT_MSG_PINGREQ_TYPE:
                     var pingReqest = MqttMsgPingReq.Parse(rawMessage.MessageType, protocolVersion);
-                    MqttMsgPingResp pingresp = new MqttMsgPingResp();
-                    rawMessage.ClientConnection.Send(pingresp);
-
+                    outgoingMessageManager.PingResp(rawMessage.ClientConnection); 
                     break;
 
                 case MqttMsgBase.MQTT_MSG_SUBSCRIBE_TYPE:
@@ -95,12 +96,6 @@
             }
         }
 
-        /// <summary>
-        /// Enqueue a message into the inflight queue
-        /// </summary>
-        /// <param name="msg">Message to enqueue</param>
-        /// <param name="flow">Message flow (publish, acknowledge)</param>
-        /// <returns>Message enqueued or not</returns>
         private bool EnqueueInflight(MqttClientConnection clientConnection, MqttMsgBase msg, MqttMsgFlow flow)
         {
             // enqueue is needed (or not)
@@ -183,13 +178,19 @@
                         && ((msg.QosLevel == MqttMsgBase.QOS_LEVEL_AT_LEAST_ONCE)
                             || (msg.QosLevel == MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE)))
                     {
-                        if (clientConnection.Session != null) clientConnection.Session.InflightMessages.Add(msgContext.Key, msgContext);
+                        if (clientConnection.Session != null)
+                        {
+                            clientConnection.Session.InflightMessages.Add(msgContext.Key, msgContext);
+                        }
                     }
                     // to acknowledge and QoS level 2
                     else if ((msgContext.Flow == MqttMsgFlow.ToAcknowledge)
                              && (msg.QosLevel == MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE))
                     {
-                        if (clientConnection.Session != null) clientConnection.Session.InflightMessages.Add(msgContext.Key, msgContext);
+                        if (clientConnection.Session != null)
+                        {
+                            clientConnection.Session.InflightMessages.Add(msgContext.Key, msgContext);
+                        }
                     }
                 }
             }
@@ -197,10 +198,6 @@
             return enqueue;
         }
 
-        /// <summary>
-        /// Enqueue a message into the internal queue
-        /// </summary>
-        /// <param name="msg">Message to enqueue</param>
         private void EnqueueInternal(MqttClientConnection clientConnection, MqttMsgBase msg)
         {
             // enqueue is needed (or not)
@@ -223,11 +220,7 @@
                 // we need to re-send PUBCOMP only
                 if (msgCtx == null)
                 {
-                    MqttMsgPubcomp pubcomp = new MqttMsgPubcomp();
-                    pubcomp.MessageId = msg.MessageId;
-
-                    clientConnection.Send(pubcomp);
-
+                    outgoingMessageManager.Pubcomp(clientConnection, msg.MessageId);
                     enqueue = false;
                 }
             }

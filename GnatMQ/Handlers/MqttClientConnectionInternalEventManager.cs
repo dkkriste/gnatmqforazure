@@ -13,10 +13,13 @@
 
         private readonly MqttSubscriberManager subscriberManager;
 
-        public MqttClientConnectionInternalEventManager(MqttPublishManager publishManager, MqttSubscriberManager subscriberManager)
+        private readonly MqttOutgoingMessageManager outgoingMessageManager;
+
+        public MqttClientConnectionInternalEventManager(MqttPublishManager publishManager, MqttSubscriberManager subscriberManager, MqttOutgoingMessageManager outgoingMessageManager)
         {
             this.publishManager = publishManager;
             this.subscriberManager = subscriberManager;
+            this.outgoingMessageManager = outgoingMessageManager;
         }
 
         public void ProcessInternalEventQueue(MqttClientConnection clientConnection)
@@ -102,9 +105,6 @@
             // all events for received messages dispatched, check if there is closing connection
             if ((clientConnection.eventQueue.Count == 0) && clientConnection.isConnectionClosing)
             {
-                // client must close connection
-                clientConnection.Close();
-
                 // client raw disconnection
                 clientConnection.OnConnectionClosed();
             }
@@ -133,7 +133,7 @@
             }
             
             // send SUBACK message to the client
-            clientConnection.Suback(messageId, qosLevels);
+            outgoingMessageManager.Suback(clientConnection, messageId, qosLevels);
 
             for (int i = 0; i < topics.Length; i++)
             {
@@ -151,7 +151,7 @@
             }
 
             // send UNSUBACK message to the client
-            clientConnection.Unsuback(messageId);
+            outgoingMessageManager.Unsuback(clientConnection, messageId);
         }
 
         private void OnMqttMsgPublished(MqttClientConnection clientConnection, ushort messageId, bool isPublished)
@@ -169,7 +169,7 @@
         private void OnMqttMsgDisconnected(MqttClientConnection clientConnection)
         {
             // close the client
-            clientConnection.Close();
+            clientConnection.OnConnectionClosed();
         }
     }
 }
