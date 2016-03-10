@@ -13,6 +13,11 @@
     {
         private readonly MqttOutgoingMessageManager outgoingMessageManager;
 
+        public MqttClientConnectionInflightManager(MqttOutgoingMessageManager outgoingMessageManager)
+        {
+            this.outgoingMessageManager = outgoingMessageManager;
+        }
+
         public void ProcessInflightQueue(MqttClientConnection clientConnection)
         {
             if (!clientConnection.IsRunning)

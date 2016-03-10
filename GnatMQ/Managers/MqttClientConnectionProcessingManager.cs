@@ -50,9 +50,17 @@
 
         private int numberOfAssignedClients;
 
-        public MqttClientConnectionProcessingManager(ILogger logger)
+        public MqttClientConnectionProcessingManager(ILogger logger, ConcurrentDictionary<string, MqttClientConnection> allConnectedClients, MqttSessionManager sessionManager, MqttSubscriberManager subscriberManager, MqttUacManager uacManager, MqttClientConnectionIncomingMessageManager incomingMessageManager, MqttClientConnectionInflightManager inflightManager, MqttClientConnectionInternalEventManager internalEventManager, MqttOutgoingMessageManager outgoingMessageManager)
         {
             this.logger = logger;
+            this.allConnectedClients = allConnectedClients;
+            this.sessionManager = sessionManager;
+            this.subscriberManager = subscriberManager;
+            this.uacManager = uacManager;
+            this.incomingMessageManager = incomingMessageManager;
+            this.inflightManager = inflightManager;
+            this.internalEventManager = internalEventManager;
+            this.outgoingMessageManager = outgoingMessageManager;
             rawMessageQueue = new BlockingCollection<MqttRawMessage>();
             clientConnectionsWithInflightQueuesToProcess = new BlockingCollection<MqttClientConnection>();
             clientConnectionsWithInternalEventQueuesToProcess = new BlockingCollection<MqttClientConnection>();

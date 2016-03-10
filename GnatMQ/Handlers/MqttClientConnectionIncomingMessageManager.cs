@@ -13,6 +13,11 @@
     {
         private readonly MqttOutgoingMessageManager outgoingMessageManager;
 
+        public MqttClientConnectionIncomingMessageManager(MqttOutgoingMessageManager outgoingMessageManager)
+        {
+            this.outgoingMessageManager = outgoingMessageManager;
+        }
+
         public void ProcessReceivedMessage(MqttRawMessage rawMessage)
         {
             if (!rawMessage.ClientConnection.IsRunning)

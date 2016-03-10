@@ -26,6 +26,7 @@ namespace GnatMQForAzure
     using GnatMQForAzure.Entities;
     using GnatMQForAzure.Entities.Delegates;
     using GnatMQForAzure.Entities.Enums;
+    using GnatMQForAzure.Handlers;
     using GnatMQForAzure.Managers;
 
     /// <summary>
@@ -45,6 +46,22 @@ namespace GnatMQForAzure
 
         private MqttAsyncTcpSocketListener socketListener;
 
+        private MqttRawMessageManager rawMessageManager;
+
+        private MqttAsyncTcpReceiver asyncTcpReceiver;
+
+        private MqttAsyncTcpSender asyncTcpSender;
+
+        private IMqttClientConnectionManager connectionManager;
+
+        private MqttOutgoingMessageManager outgoingMessageManager;
+
+        private MqttClientConnectionInternalEventManager internalEventManager;
+
+        private MqttClientConnectionInflightManager inflightManager;
+
+        private MqttClientConnectionIncomingMessageManager incomingMessageManager;
+
         // reference to publisher manager
         private MqttPublishManager publishManager;
         
@@ -56,9 +73,6 @@ namespace GnatMQForAzure
 
         // reference to User Access Control manager
         private MqttUacManager uacManager;
-
-        // MQTT communication layer
-        private IMqttCommunicationLayer commLayer;
 
         /// <summary>
         /// User authentication method
@@ -113,9 +127,6 @@ namespace GnatMQForAzure
             // MQTT broker settings
             this.settings = settings;
 
-            // MQTT communication layer
-            this.commLayer = commLayer;
-
             // create managers (publisher, subscriber, session and UAC)
             this.subscriberManager = new MqttSubscriberManager();
             this.sessionManager = new MqttSessionManager();
@@ -124,14 +135,25 @@ namespace GnatMQForAzure
 
             this.allConnectedClients = new ConcurrentDictionary<string, MqttClientConnection>();
 
+            this.asyncTcpSender = new MqttAsyncTcpSender(options);
+            this.outgoingMessageManager = new MqttOutgoingMessageManager(asyncTcpSender);
+            this.inflightManager = new MqttClientConnectionInflightManager(outgoingMessageManager);
+            this.internalEventManager = new MqttClientConnectionInternalEventManager(publishManager, subscriberManager, outgoingMessageManager);
+            this.incomingMessageManager = new MqttClientConnectionIncomingMessageManager(outgoingMessageManager);
+
             var numberOfProcessingManagersNeeded = options.MaxConnections / options.ConnectionsPrProcessingManager;
             this.processingManagers = new MqttClientConnectionProcessingManager[numberOfProcessingManagersNeeded];
             for (var i = 0; i < processingManagers.Length; i++)
             {
-                processingManagers[i] = new MqttClientConnectionProcessingManager(logger);
+                processingManagers[i] = new MqttClientConnectionProcessingManager(logger, allConnectedClients, sessionManager, subscriberManager, uacManager, incomingMessageManager, inflightManager, internalEventManager, outgoingMessageManager);
             }
 
             this.processingLoadbalancer = new MqttProcessingLoadbalancer(logger, processingManagers);
+
+            this.rawMessageManager = new MqttRawMessageManager(options);
+            this.asyncTcpReceiver = new MqttAsyncTcpReceiver(rawMessageManager);
+            this.connectionManager = new MqttClientConnectionManager(options, asyncTcpReceiver);
+            this.socketListener = new MqttAsyncTcpSocketListener(processingLoadbalancer, connectionManager, options);
         }
 
         /// <summary>
@@ -139,7 +161,6 @@ namespace GnatMQForAzure
         /// </summary>
         public void Start()
         {
-            this.commLayer.Start();
             this.publishManager.Start();
 
             foreach (var processingManager in processingManagers)
@@ -153,7 +174,6 @@ namespace GnatMQForAzure
         /// </summary>
         public void Stop()
         {
-            this.commLayer.Stop();
             this.publishManager.Stop();
 
             foreach (var processingManager in processingManagers)

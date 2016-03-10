@@ -11,12 +11,12 @@
 
         private readonly int individualMessageBufferSize;
 
-        public MqttRawMessageManager(int initialBufferSize, int individualMessageBufferSize)
+        public MqttRawMessageManager(MqttOptions options)
         {
             rawMessageBuffer = new ConcurrentStack<MqttRawMessage>();
-            this.individualMessageBufferSize = individualMessageBufferSize;
+            this.individualMessageBufferSize = options.IndividualMessageBufferSize;
 
-            for (int i = 0; i < initialBufferSize; i++)
+            for (int i = 0; i < options.InitialNumberOfRawMessages; i++)
             {
                 rawMessageBuffer.Push(new MqttRawMessage(individualMessageBufferSize));
             }

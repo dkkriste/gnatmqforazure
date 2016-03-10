@@ -14,18 +14,16 @@
 
         private readonly ConcurrentStack<MqttClientConnection> unconnectedClients;
 
-        private readonly BufferManager readSocketBufferManager;
-
         public MqttClientConnectionManager(MqttOptions options, MqttAsyncTcpReceiver receiver)
         {
             connectedClients = new ConcurrentDictionary<Guid, MqttClientConnection>();
             unconnectedClients = new ConcurrentStack<MqttClientConnection>();
-            readSocketBufferManager = new BufferManager(1024, 8192);
+            var readSocketBufferManager = new BufferManager(options.MaxConnections, options.ReadAndSendBufferSize);
 
             for (var i = 0; i < options.MaxConnections; i++)
             {
                 var receiveSocketEventArg = new SocketAsyncEventArgs();
-                this.readSocketBufferManager.SetBuffer(receiveSocketEventArg);
+                readSocketBufferManager.SetBuffer(receiveSocketEventArg);
                 receiveSocketEventArg.Completed += receiver.ReceiveCompleted;
                 var clientConnection = new MqttClientConnection(receiveSocketEventArg);
 

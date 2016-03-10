@@ -12,12 +12,12 @@
 
         private readonly ConcurrentStack<SocketAsyncEventArgs> sendBufferEventArgsPool;
 
-        public MqttAsyncTcpSender(int numberOfSendBuffers, int sendBufferSize)
+        public MqttAsyncTcpSender(MqttOptions options)
         {
-            sendBufferManager = new BufferManager(numberOfSendBuffers, sendBufferSize);
+            sendBufferManager = new BufferManager(options.NumberOfSendBuffers, options.ReadAndSendBufferSize);
             sendBufferEventArgsPool = new ConcurrentStack<SocketAsyncEventArgs>();
 
-            for (var i = 0; i < numberOfSendBuffers ; i++)
+            for (var i = 0; i < options.NumberOfSendBuffers; i++)
             {
                 var args = CreateAndSetNewSendArgs();
                 sendBufferEventArgsPool.Push(args);
