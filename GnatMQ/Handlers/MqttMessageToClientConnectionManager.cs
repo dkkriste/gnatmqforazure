@@ -9,16 +9,9 @@
     using GnatMQForAzure.Managers;
     using GnatMQForAzure.Messages;
 
-    public class MqttClientConnectionIncomingMessageManager
+    public static class MqttMessageToClientConnectionManager
     {
-        private readonly MqttOutgoingMessageManager outgoingMessageManager;
-
-        public MqttClientConnectionIncomingMessageManager(MqttOutgoingMessageManager outgoingMessageManager)
-        {
-            this.outgoingMessageManager = outgoingMessageManager;
-        }
-
-        public void ProcessReceivedMessage(MqttRawMessage rawMessage)
+        public static void ProcessReceivedMessage(MqttRawMessage rawMessage)
         {
             if (!rawMessage.ClientConnection.IsRunning)
             {
@@ -40,7 +33,7 @@
 
                 case MqttMsgBase.MQTT_MSG_PINGREQ_TYPE:
                     var pingReqest = MqttMsgPingReq.Parse(rawMessage.MessageType, protocolVersion);
-                    outgoingMessageManager.PingResp(rawMessage.ClientConnection); 
+                    MqttOutgoingMessageManager.PingResp(rawMessage.ClientConnection); 
                     break;
 
                 case MqttMsgBase.MQTT_MSG_SUBSCRIBE_TYPE:
@@ -106,7 +99,7 @@
         /// <param name="qosLevel">QoS Level</param>
         /// <param name="retain">Retain flag</param>
         /// <returns>Message Id related to PUBLISH message</returns>
-        public ushort Publish(MqttClientConnection clientConnection, string topic, byte[] message, byte qosLevel, bool retain)
+        public static ushort Publish(MqttClientConnection clientConnection, string topic, byte[] message, byte qosLevel, bool retain)
         {
             MqttMsgPublish publish = new MqttMsgPublish(topic, message, false, qosLevel, retain);
             publish.MessageId = clientConnection.GetMessageId();
@@ -117,7 +110,7 @@
             return publish.MessageId;
         }
 
-        private void EnqueueInflight(MqttClientConnection clientConnection, MqttMsgBase msg, MqttMsgFlow flow)
+        private static void EnqueueInflight(MqttClientConnection clientConnection, MqttMsgBase msg, MqttMsgFlow flow)
         {
             // enqueue is needed (or not)
             bool enqueue = true;
@@ -217,7 +210,7 @@
             }
         }
 
-        private void EnqueueInternal(MqttClientConnection clientConnection, MqttMsgBase msg)
+        private static void EnqueueInternal(MqttClientConnection clientConnection, MqttMsgBase msg)
         {
             // enqueue is needed (or not)
             bool enqueue = true;
@@ -239,7 +232,7 @@
                 // we need to re-send PUBCOMP only
                 if (msgCtx == null)
                 {
-                    outgoingMessageManager.Pubcomp(clientConnection, msg.MessageId);
+                    MqttOutgoingMessageManager.Pubcomp(clientConnection, msg.MessageId);
                     enqueue = false;
                 }
             }

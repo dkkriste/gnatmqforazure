@@ -6,14 +6,22 @@
 
     using GnatMQForAzure.Entities;
 
-    public class MqttAsyncTcpSender
+    public static class MqttAsyncTcpSender
     {
-        private readonly BufferManager sendBufferManager;
+        private static BufferManager sendBufferManager;
 
-        private readonly ConcurrentStack<SocketAsyncEventArgs> sendBufferEventArgsPool;
+        private static ConcurrentStack<SocketAsyncEventArgs> sendBufferEventArgsPool;
 
-        public MqttAsyncTcpSender(MqttOptions options)
+        private static bool isInitialized;
+
+        public static void Init(MqttOptions options)
         {
+            if (isInitialized)
+            {
+                return;
+            }
+
+            isInitialized = true;
             sendBufferManager = new BufferManager(options.NumberOfSendBuffers, options.ReadAndSendBufferSize);
             sendBufferEventArgsPool = new ConcurrentStack<SocketAsyncEventArgs>();
 
@@ -24,7 +32,7 @@
             }
         }
 
-        public void Send(Socket socket, byte[] message)
+        public static void Send(Socket socket, byte[] message)
         {
             SocketAsyncEventArgs socketArgs;
             if (sendBufferEventArgsPool.TryPop(out socketArgs))
@@ -39,7 +47,7 @@
             }
         }
 
-        private SocketAsyncEventArgs CreateAndSetNewSendArgs()
+        private static SocketAsyncEventArgs CreateAndSetNewSendArgs()
         {
             var args = new SocketAsyncEventArgs();
             sendBufferManager.SetBuffer(args);
@@ -48,7 +56,7 @@
             return args;
         }
 
-        private void StartSend(SocketAsyncEventArgs sendEventArgs)
+        private static void StartSend(SocketAsyncEventArgs sendEventArgs)
         {
             bool willRaiseEvent = sendEventArgs.AcceptSocket.SendAsync(sendEventArgs);
             if (!willRaiseEvent)
@@ -57,12 +65,12 @@
             }
         }
 
-        private void SendCompleted(object sender, SocketAsyncEventArgs sendEventArgs)
+        private static void SendCompleted(object sender, SocketAsyncEventArgs sendEventArgs)
         {
             ProcessSend(sendEventArgs);
         }
 
-        private void ProcessSend(SocketAsyncEventArgs sendEventArgs)
+        private static void ProcessSend(SocketAsyncEventArgs sendEventArgs)
         {
             if (sendEventArgs.SocketError == SocketError.OperationAborted)
             {
@@ -100,7 +108,7 @@
             }
         }
 
-        private void CloseClientSocket(SocketAsyncEventArgs sendEventArgs)
+        private static void CloseClientSocket(SocketAsyncEventArgs sendEventArgs)
         {
             try
             {

@@ -285,6 +285,22 @@ namespace GnatMQForAzure
             }
         }
 
+        public void OnMqttMsgPublishReceived(MqttMsgPublish msg)
+        {
+            if (ProcessingManager != null)
+            {
+               ProcessingManager.OnMqttMsgPublishReceived(this, msg); 
+            }
+        }
+
+        public void OnMqttMsgSubscribeReceived(ushort messageId, string[] topics, byte[] qosLevels)
+        {
+            if (ProcessingManager != null)
+            {
+                ProcessingManager.OnMqttMsgSubscribeReceived(this, messageId, topics, qosLevels);
+            }
+        }
+
         /// <summary>
         /// Generate the next message identifier
         /// </summary>

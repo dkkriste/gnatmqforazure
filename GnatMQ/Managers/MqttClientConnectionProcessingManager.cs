@@ -6,11 +6,9 @@
     using System.Text;
     using System.Threading.Tasks;
 
-    using GnatMQForAzure.Communication;
     using GnatMQForAzure.Contracts;
     using GnatMQForAzure.Entities;
     using GnatMQForAzure.Entities.Enums;
-    using GnatMQForAzure.Exceptions;
     using GnatMQForAzure.Handlers;
     using GnatMQForAzure.Messages;
     using GnatMQForAzure.Session;
@@ -24,19 +22,7 @@
 
         private readonly MqttPublishManager publishManager;
 
-        private readonly MqttSessionManager sessionManager;
-
-        private readonly MqttSubscriberManager subscriberManager;
-
         private readonly MqttUacManager uacManager;
-
-        private readonly MqttClientConnectionIncomingMessageManager incomingMessageManager;
-
-        private readonly MqttClientConnectionInflightManager inflightManager;
-
-        private readonly MqttClientConnectionInternalEventManager internalEventManager;
-
-        private readonly MqttOutgoingMessageManager outgoingMessageManager;
 
         private readonly BlockingCollection<MqttRawMessage> rawMessageQueue;
 
@@ -50,17 +36,11 @@
 
         private int numberOfAssignedClients;
 
-        public MqttClientConnectionProcessingManager(ILogger logger, ConcurrentDictionary<string, MqttClientConnection> allConnectedClients, MqttSessionManager sessionManager, MqttSubscriberManager subscriberManager, MqttUacManager uacManager, MqttClientConnectionIncomingMessageManager incomingMessageManager, MqttClientConnectionInflightManager inflightManager, MqttClientConnectionInternalEventManager internalEventManager, MqttOutgoingMessageManager outgoingMessageManager)
+        public MqttClientConnectionProcessingManager(ILogger logger, ConcurrentDictionary<string, MqttClientConnection> allConnectedClients, MqttUacManager uacManager)
         {
             this.logger = logger;
             this.allConnectedClients = allConnectedClients;
-            this.sessionManager = sessionManager;
-            this.subscriberManager = subscriberManager;
             this.uacManager = uacManager;
-            this.incomingMessageManager = incomingMessageManager;
-            this.inflightManager = inflightManager;
-            this.internalEventManager = internalEventManager;
-            this.outgoingMessageManager = outgoingMessageManager;
             rawMessageQueue = new BlockingCollection<MqttRawMessage>();
             clientConnectionsWithInflightQueuesToProcess = new BlockingCollection<MqttClientConnection>();
             clientConnectionsWithInternalEventQueuesToProcess = new BlockingCollection<MqttClientConnection>();
@@ -111,7 +91,7 @@
                 try
                 {
                     var rawMessage = rawMessageQueue.Take();
-                    incomingMessageManager.ProcessReceivedMessage(rawMessage);
+                    MqttMessageToClientConnectionManager.ProcessReceivedMessage(rawMessage);
                 }
                 catch (Exception exception)
                 {
@@ -127,7 +107,7 @@
                 try
                 {
                     var clientConnection = clientConnectionsWithInflightQueuesToProcess.Take();
-                    inflightManager.ProcessInflightQueue(clientConnection);
+                    MqttClientConnectionInflightManager.ProcessInflightQueue(clientConnection);
                 }
                 catch (Exception exception)
                 {
@@ -143,7 +123,7 @@
                 try
                 {
                     var clientConnection = clientConnectionsWithInternalEventQueuesToProcess.Take();
-                    internalEventManager.ProcessInternalEventQueue(clientConnection);
+                    MqttClientConnectionInternalEventManager.ProcessInternalEventQueue(clientConnection);
                 }
                 catch (Exception exception)
                 {
@@ -220,7 +200,7 @@
                     MqttClientSession clientSession = new MqttClientSession(clientId);
 
                     // get session for the connected client
-                    MqttBrokerSession session = this.sessionManager.GetSession(clientId);
+                    MqttBrokerSession session = MqttSessionManager.GetSession(clientId);
 
                     // [v3.1.1] session present flag
                     bool sessionPresent = false;
@@ -234,7 +214,7 @@
                     }
 
                     // send CONNACK message to the client
-                    outgoingMessageManager.Connack(clientConnection, message, returnCode, clientId, sessionPresent);
+                    MqttOutgoingMessageManager.Connack(clientConnection, message, returnCode, clientId, sessionPresent);
 
                     // load/inject session to the client
                     clientConnection.LoadSession(clientSession);
@@ -250,7 +230,7 @@
                             // register all subscriptions for the connected client
                             foreach (MqttSubscription subscription in session.Subscriptions)
                             {
-                                this.subscriberManager.Subscribe(
+                                MqttSubscriberManager.Subscribe(
                                     subscription.Topic,
                                     subscription.QosLevel,
                                     clientConnection);
@@ -272,15 +252,15 @@
                 else
                 {
                     // send CONNACK message to the client
-                    outgoingMessageManager.Connack(clientConnection, message, returnCode, clientId, false);
+                    MqttOutgoingMessageManager.Connack(clientConnection, message, returnCode, clientId, false);
 
-                    this.sessionManager.ClearSession(clientId);
+                    MqttSessionManager.ClearSession(clientId);
                 }
             }
             else
             {
                 // send CONNACK message to the client
-                outgoingMessageManager.Connack(clientConnection, message, returnCode, clientId, false);
+                MqttOutgoingMessageManager.Connack(clientConnection, message, returnCode, clientId, false);
             }
         }
 
@@ -304,18 +284,18 @@
                 // if not clean session
                 if (!clientConnection.CleanSession)
                 {
-                    List<MqttSubscription> subscriptions = this.subscriberManager.GetSubscriptionsByClient(clientConnection.ClientId);
+                    List<MqttSubscription> subscriptions = MqttSubscriberManager.GetSubscriptionsByClient(clientConnection.ClientId);
 
                     if ((subscriptions != null) && (subscriptions.Count > 0))
                     {
-                        this.sessionManager.SaveSession(clientConnection.ClientId, clientConnection.Session, subscriptions);
+                        MqttSessionManager.SaveSession(clientConnection.ClientId, clientConnection.Session, subscriptions);
 
                         // TODO : persist client session if broker close
                     }
                 }
 
                 // delete client from runtime subscription
-                this.subscriberManager.Unsubscribe(clientConnection);
+                MqttSubscriberManager.Unsubscribe(clientConnection);
 
                 // close the client
                 CloseClientConnection(clientConnection);
@@ -325,6 +305,38 @@
             {
                 //TODO
                 numberOfAssignedClients--;
+            }
+        }
+
+        public void OnMqttMsgPublishReceived(MqttClientConnection clientConnection, MqttMsgPublish msg)
+        {
+            // create PUBLISH message to publish
+            // [v3.1.1] DUP flag from an incoming PUBLISH message is not propagated to subscribers
+            //          It should be set in the outgoing PUBLISH message based on transmission for each subscriber
+            MqttMsgPublish publish = new MqttMsgPublish(msg.Topic, msg.Message, false, msg.QosLevel, msg.Retain);
+
+            // publish message through publisher manager
+            this.publishManager.Publish(publish);
+        }
+
+        public void OnMqttMsgSubscribeReceived(MqttClientConnection clientConnection, ushort messageId, string[] topics, byte[] qosLevels)
+        {
+            for (int i = 0; i < topics.Length; i++)
+            {
+                // TODO : business logic to grant QoS levels based on some conditions ?
+                //        now the broker granted the QoS levels requested by client
+
+                // subscribe client for each topic and QoS level requested
+                MqttSubscriberManager.Subscribe(topics[i], qosLevels[i], clientConnection);
+            }
+
+            // send SUBACK message to the client
+            MqttOutgoingMessageManager.Suback(clientConnection, messageId, qosLevels);
+
+            for (int i = 0; i < topics.Length; i++)
+            {
+                // publish retained message on the current subscription
+                this.publishManager.PublishRetaind(topics[i], clientConnection.ClientId);
             }
         }
 

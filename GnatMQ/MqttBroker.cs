@@ -50,27 +50,11 @@ namespace GnatMQForAzure
 
         private MqttAsyncTcpReceiver asyncTcpReceiver;
 
-        private MqttAsyncTcpSender asyncTcpSender;
-
         private IMqttClientConnectionManager connectionManager;
-
-        private MqttOutgoingMessageManager outgoingMessageManager;
-
-        private MqttClientConnectionInternalEventManager internalEventManager;
-
-        private MqttClientConnectionInflightManager inflightManager;
-
-        private MqttClientConnectionIncomingMessageManager incomingMessageManager;
 
         // reference to publisher manager
         private MqttPublishManager publishManager;
         
-        // reference to subscriber manager
-        private MqttSubscriberManager subscriberManager;
-
-        // reference to session manager
-        private MqttSessionManager sessionManager;
-
         // reference to User Access Control manager
         private MqttUacManager uacManager;
 
@@ -128,24 +112,16 @@ namespace GnatMQForAzure
             this.settings = settings;
 
             // create managers (publisher, subscriber, session and UAC)
-            this.subscriberManager = new MqttSubscriberManager();
-            this.sessionManager = new MqttSessionManager();
-            this.publishManager = new MqttPublishManager(this.subscriberManager, this.sessionManager);
+            this.publishManager = new MqttPublishManager();
             this.uacManager = new MqttUacManager();
 
             this.allConnectedClients = new ConcurrentDictionary<string, MqttClientConnection>();
-
-            this.asyncTcpSender = new MqttAsyncTcpSender(options);
-            this.outgoingMessageManager = new MqttOutgoingMessageManager(asyncTcpSender);
-            this.inflightManager = new MqttClientConnectionInflightManager(outgoingMessageManager);
-            this.internalEventManager = new MqttClientConnectionInternalEventManager(publishManager, subscriberManager, outgoingMessageManager);
-            this.incomingMessageManager = new MqttClientConnectionIncomingMessageManager(outgoingMessageManager);
 
             var numberOfProcessingManagersNeeded = options.MaxConnections / options.ConnectionsPrProcessingManager;
             this.processingManagers = new MqttClientConnectionProcessingManager[numberOfProcessingManagersNeeded];
             for (var i = 0; i < processingManagers.Length; i++)
             {
-                processingManagers[i] = new MqttClientConnectionProcessingManager(logger, allConnectedClients, sessionManager, subscriberManager, uacManager, incomingMessageManager, inflightManager, internalEventManager, outgoingMessageManager);
+                processingManagers[i] = new MqttClientConnectionProcessingManager(logger, allConnectedClients, uacManager);
             }
 
             this.processingLoadbalancer = new MqttProcessingLoadbalancer(logger, processingManagers);

@@ -7,16 +7,9 @@
     using GnatMQForAzure.Exceptions;
     using GnatMQForAzure.Messages;
 
-    public class MqttOutgoingMessageManager
+    public static class MqttOutgoingMessageManager
     {
-        private readonly MqttAsyncTcpSender asyncTcpSender;
-
-        public MqttOutgoingMessageManager(MqttAsyncTcpSender asyncTcpSender)
-        {
-            this.asyncTcpSender = asyncTcpSender;
-        }
-
-        public void Connack(MqttClientConnection clientConnection, MqttMsgConnect connect, byte returnCode, string clientId, bool sessionPresent)
+        public static void Connack(MqttClientConnection clientConnection, MqttMsgConnect connect, byte returnCode, string clientId, bool sessionPresent)
         {
             clientConnection.LastCommunicationTime = Environment.TickCount;
 
@@ -28,7 +21,7 @@
             }
 
             // ... send it to the client
-            this.Send(clientConnection, connack);
+            Send(clientConnection, connack);
 
             // connection accepted, start keep alive thread checking
             if (returnCode == MqttMsgConnack.CONN_ACCEPTED)
@@ -56,38 +49,38 @@
             }
         }
 
-        public void Suback(MqttClientConnection clientConnection, ushort messageId, byte[] grantedQosLevels)
+        public static void Suback(MqttClientConnection clientConnection, ushort messageId, byte[] grantedQosLevels)
         {
             MqttMsgSuback suback = new MqttMsgSuback();
             suback.MessageId = messageId;
             suback.GrantedQoSLevels = grantedQosLevels;
 
-            this.Send(clientConnection, suback);
+            Send(clientConnection, suback);
         }
 
-        public void Unsuback(MqttClientConnection clientConnection, ushort messageId)
+        public static void Unsuback(MqttClientConnection clientConnection, ushort messageId)
         {
             MqttMsgUnsuback unsuback = new MqttMsgUnsuback();
             unsuback.MessageId = messageId;
 
-            this.Send(clientConnection, unsuback);
+            Send(clientConnection, unsuback);
         }
 
-        public void Puback(MqttClientConnection clientConnection, ushort messageId)
+        public static void Puback(MqttClientConnection clientConnection, ushort messageId)
         {
             MqttMsgPuback puback = new MqttMsgPuback();
             puback.MessageId = messageId;
             Send(clientConnection, puback);
         }
 
-        public void Pubcomp(MqttClientConnection clientConnection, ushort messageId)
+        public static void Pubcomp(MqttClientConnection clientConnection, ushort messageId)
         {
             MqttMsgPubcomp pubcomp = new MqttMsgPubcomp();
             pubcomp.MessageId = messageId;
             Send(clientConnection, pubcomp);
         }
 
-        public void Pubrel(MqttClientConnection clientConnection, ushort messageId, bool duplicate)
+        public static void Pubrel(MqttClientConnection clientConnection, ushort messageId, bool duplicate)
         {
             MqttMsgPubrel pubrel = new MqttMsgPubrel();
             pubrel.MessageId = messageId;
@@ -95,24 +88,24 @@
             Send(clientConnection, pubrel);
         }
 
-        public void Pubrec(MqttClientConnection clientConnection, ushort messageId)
+        public static void Pubrec(MqttClientConnection clientConnection, ushort messageId)
         {
             MqttMsgPubrec pubrec = new MqttMsgPubrec();
             pubrec.MessageId = messageId;
             Send(clientConnection, pubrec);
         }
 
-        public void PingResp(MqttClientConnection clientConnection)
+        public static void PingResp(MqttClientConnection clientConnection)
         {
             MqttMsgPingResp pingresp = new MqttMsgPingResp();
             Send(clientConnection, pingresp);
         }
 
-        public void Send(MqttClientConnection clientConnection, byte[] msgBytes)
+        public static void Send(MqttClientConnection clientConnection, byte[] msgBytes)
         {
             try
             {
-                asyncTcpSender.Send(clientConnection.ReceiveSocketAsyncEventArgs.AcceptSocket, msgBytes);
+                MqttAsyncTcpSender.Send(clientConnection.ReceiveSocketAsyncEventArgs.AcceptSocket, msgBytes);
             }
             catch (Exception e)
             {
@@ -120,9 +113,9 @@
             }
         }
 
-        public void Send(MqttClientConnection clientConnection, MqttMsgBase msg)
+        public static void Send(MqttClientConnection clientConnection, MqttMsgBase msg)
         {
-            this.Send(clientConnection, msg.GetBytes((byte)clientConnection.ProtocolVersion));
+            Send(clientConnection, msg.GetBytes((byte)clientConnection.ProtocolVersion));
         }
     }
 }

@@ -33,16 +33,8 @@ namespace GnatMQForAzure.Managers
     /// </summary>
     public class MqttPublishManager
     {
-        private readonly MqttClientConnectionIncomingMessageManager incomingMessageManager;
-
         // queue messages to publish
         private readonly BlockingCollection<MqttMsgBase> publishQueue;
-
-        // reference to subscriber manager
-        private readonly MqttSubscriberManager subscriberManager;
-
-        // reference to session manager
-        private readonly MqttSessionManager sessionManager;
 
         // retained messages
         private readonly ConcurrentDictionary<string, MqttMsgPublish> retainedMessages;
@@ -58,16 +50,8 @@ namespace GnatMQForAzure.Managers
         /// <summary>
         /// Constructor
         /// </summary>
-        /// <param name="subscriberManager">Reference to subscriber manager</param>
-        /// <param name="sessionManager">Reference to session manager</param>
-        public MqttPublishManager(MqttSubscriberManager subscriberManager, MqttSessionManager sessionManager)
+        public MqttPublishManager()
         {
-            // save reference to subscriber manager
-            this.subscriberManager = subscriberManager;
-
-            // save reference to session manager
-            this.sessionManager = sessionManager;
-
             // create empty list for retained messages
             this.retainedMessages = new ConcurrentDictionary<string, MqttMsgPublish>();
 
@@ -141,7 +125,7 @@ namespace GnatMQForAzure.Managers
         /// <param name="clientId">Client Id to send retained message</param>
         public void PublishRetaind(string topic, string clientId)
         {
-            MqttSubscription subscription = this.subscriberManager.GetSubscription(topic, clientId);
+            MqttSubscription subscription = MqttSubscriberManager.GetSubscription(topic, clientId);
 
             // add subscription to list of subscribers for receiving retained messages
             if (subscription != null)
@@ -180,7 +164,7 @@ namespace GnatMQForAzure.Managers
                                                 : retained.QosLevel;
 
                             // send PUBLISH message to the current subscriber
-                            incomingMessageManager.Publish(
+                            MqttMessageToClientConnectionManager.Publish(
                                 subscription.ClientConnection,
                                 retained.Topic,
                                 retained.Message,
@@ -204,7 +188,7 @@ namespace GnatMQForAzure.Managers
                 {
                     string clientId = this.clientsForSession.Take();
 
-                    MqttBrokerSession session = this.sessionManager.GetSession(clientId);
+                    MqttBrokerSession session = MqttSessionManager.GetSession(clientId);
 
                     while (session.OutgoingMessages.Count > 0)
                     {
@@ -223,7 +207,7 @@ namespace GnatMQForAzure.Managers
                                                 ? subscription.QosLevel
                                                 : outgoingMsg.QosLevel;
 
-                            incomingMessageManager.Publish(
+                            MqttMessageToClientConnectionManager.Publish(
                                 subscription.ClientConnection,
                                 outgoingMsg.Topic,
                                 outgoingMsg.Message,
@@ -252,7 +236,7 @@ namespace GnatMQForAzure.Managers
                 if (publish != null)
                 {
                     // get all subscriptions for a topic
-                    List<MqttSubscription> subscriptions = this.subscriberManager.GetSubscriptionsByTopic(publish.Topic);
+                    List<MqttSubscription> subscriptions = MqttSubscriberManager.GetSubscriptionsByTopic(publish.Topic);
 
                     byte qosLevel;
                     if ((subscriptions != null) && (subscriptions.Count > 0))
@@ -264,7 +248,7 @@ namespace GnatMQForAzure.Managers
                                            : publish.QosLevel;
 
                             // send PUBLISH message to the current subscriber
-                            incomingMessageManager.Publish(
+                            MqttMessageToClientConnectionManager.Publish(
                                 subscription.ClientConnection,
                                 publish.Topic,
                                 publish.Message,
@@ -274,7 +258,7 @@ namespace GnatMQForAzure.Managers
                     }
 
                     // get all sessions
-                    List<MqttBrokerSession> sessions = this.sessionManager.GetSessions();
+                    List<MqttBrokerSession> sessions = MqttSessionManager.GetSessions();
 
                     if ((sessions != null) && (sessions.Count > 0))
                     {

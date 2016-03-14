@@ -9,16 +9,9 @@
     using GnatMQForAzure.Managers;
     using GnatMQForAzure.Messages;
 
-    public class MqttClientConnectionInflightManager
+    public static class MqttClientConnectionInflightManager
     {
-        private readonly MqttOutgoingMessageManager outgoingMessageManager;
-
-        public MqttClientConnectionInflightManager(MqttOutgoingMessageManager outgoingMessageManager)
-        {
-            this.outgoingMessageManager = outgoingMessageManager;
-        }
-
-        public void ProcessInflightQueue(MqttClientConnection clientConnection)
+        public static void ProcessInflightQueue(MqttClientConnection clientConnection)
         {
             if (!clientConnection.IsRunning)
             {
@@ -124,7 +117,7 @@
             }
         }
 
-        private int SendPubrel(MqttClientConnection clientConnection, MqttMsgContext msgContext, MqttMsgBase msgInflight, int timeout)
+        private static int SendPubrel(MqttClientConnection clientConnection, MqttMsgContext msgContext, MqttMsgBase msgInflight, int timeout)
         {
             // QoS 2, PUBREL message to send to broker, state change to wait PUBCOMP
             if (msgContext.Flow == MqttMsgFlow.ToPublish)
@@ -135,11 +128,11 @@
                 // retry ? set dup flag [v3.1.1] no needed
                 if (clientConnection.ProtocolVersion == MqttProtocolVersion.Version_3_1 && msgContext.Attempt > 1)
                 {
-                    outgoingMessageManager.Pubrel(clientConnection, msgInflight.MessageId, true);
+                    MqttOutgoingMessageManager.Pubrel(clientConnection, msgInflight.MessageId, true);
                 }
                 else
                 {
-                    outgoingMessageManager.Pubrel(clientConnection, msgInflight.MessageId, false);
+                    MqttOutgoingMessageManager.Pubrel(clientConnection, msgInflight.MessageId, false);
                 }
 
                 // update timeout : minimum between delay (based on current message sent) or current timeout
@@ -152,7 +145,7 @@
             return timeout;
         }
 
-        private MqttMsgBase WaitForPubcomp(
+        private static MqttMsgBase WaitForPubcomp(
             MqttClientConnection clientConnection,
             MqttMsgContext msgContext,
             MqttMsgBase msgInflight,
@@ -261,7 +254,7 @@
             return msgReceived;
         }
 
-        private MqttMsgBase WaitForPubrel(MqttClientConnection clientConnection, MqttMsgContext msgContext, MqttMsgBase msgInflight, ref bool msgReceivedProcessed)
+        private static MqttMsgBase WaitForPubrel(MqttClientConnection clientConnection, MqttMsgContext msgContext, MqttMsgBase msgInflight, ref bool msgReceivedProcessed)
         {
             // QoS 2, waiting for PUBREL of a PUBREC message sent
             if (msgContext.Flow != MqttMsgFlow.ToAcknowledge)
@@ -289,7 +282,7 @@
                     msgReceivedProcessed = true;
 
 
-                    outgoingMessageManager.Pubcomp(clientConnection, msgInflight.MessageId);
+                    MqttOutgoingMessageManager.Pubcomp(clientConnection, msgInflight.MessageId);
                    
 
                     internalEvent = new MsgInternalEvent(msgInflight);
@@ -318,7 +311,7 @@
             return msgReceived;
         }
 
-        private MqttMsgBase HandleWaitForPubrec(
+        private static MqttMsgBase HandleWaitForPubrec(
             MqttClientConnection clientConnection,
             MqttMsgContext msgContext,
             MqttMsgBase msgInflight,
@@ -352,7 +345,7 @@
                     acknowledge = true;
                     msgReceivedProcessed = true;
 
-                    outgoingMessageManager.Pubrel(clientConnection, msgInflight.MessageId, false);
+                    MqttOutgoingMessageManager.Pubrel(clientConnection, msgInflight.MessageId, false);
 
                     msgContext.State = MqttMsgState.WaitForPubcomp;
                     msgContext.Timestamp = Environment.TickCount;
@@ -415,7 +408,7 @@
             return msgReceived;
         }
 
-        private MqttMsgBase HandleWaitForPubackSubackUbsuback(
+        private static MqttMsgBase HandleWaitForPubackSubackUbsuback(
             MqttClientConnection clientConnection,
             MqttMsgContext msgContext,
             MqttMsgBase msgInflight,
@@ -532,7 +525,7 @@
             return msgReceived;
         }
 
-        private int HandleQueuedQos2(
+        private static int HandleQueuedQos2(
             MqttClientConnection clientConnection,
             MqttMsgContext msgContext,
             MqttMsgBase msgInflight,
@@ -550,7 +543,7 @@
                     msgInflight.DupFlag = true;
                 }
 
-                outgoingMessageManager.Send(clientConnection, msgInflight);
+                MqttOutgoingMessageManager.Send(clientConnection, msgInflight);
 
                 // update timeout : minimum between delay (based on current message sent) or current timeout
                 timeout = (clientConnection.Settings.DelayOnRetry < timeout) ? clientConnection.Settings.DelayOnRetry : timeout;
@@ -563,7 +556,7 @@
             {
                 msgContext.State = MqttMsgState.WaitForPubrel;
 
-                outgoingMessageManager.Pubrec(clientConnection, msgInflight.MessageId);
+                MqttOutgoingMessageManager.Pubrec(clientConnection, msgInflight.MessageId);
 
                 // re-enqueue message (I have to re-analyze for receiving PUBREL)
                 clientConnection.EnqueueInflight(msgContext);
@@ -572,7 +565,7 @@
             return timeout;
         }
 
-        private int HandleQueuedQos1SendSubscribeAndSendUnsubscribe(
+        private static int HandleQueuedQos1SendSubscribeAndSendUnsubscribe(
             MqttClientConnection clientConnection,
             MqttMsgContext msgContext,
             MqttMsgBase msgInflight,
@@ -606,7 +599,7 @@
                     msgContext.State = MqttMsgState.WaitForUnsuback;
                 }
 
-                outgoingMessageManager.Send(clientConnection, msgInflight);
+                MqttOutgoingMessageManager.Send(clientConnection, msgInflight);
 
                 // update timeout : minimum between delay (based on current message sent) or current timeout
                 timeout = (clientConnection.Settings.DelayOnRetry < timeout) ? clientConnection.Settings.DelayOnRetry : timeout;
@@ -617,7 +610,7 @@
             // QoS 1, PUBLISH message received from broker to acknowledge, send PUBACK
             else if (msgContext.Flow == MqttMsgFlow.ToAcknowledge)
             {
-                outgoingMessageManager.Puback(clientConnection, msgInflight.MessageId);
+                MqttOutgoingMessageManager.Puback(clientConnection, msgInflight.MessageId);
 
                 internalEvent = new MsgInternalEvent(msgInflight);
                 // notify published message from broker and acknowledged
@@ -626,7 +619,7 @@
             return timeout;
         }
 
-        private void HandleQueuedQos0(
+        private static void HandleQueuedQos0(
             MqttClientConnection clientConnection,
             MqttMsgContext msgContext,
             MqttMsgBase msgInflight)
@@ -634,7 +627,7 @@
             // QoS 0, PUBLISH message to send to broker, no state change, no acknowledge
             if (msgContext.Flow == MqttMsgFlow.ToPublish)
             {
-                outgoingMessageManager.Send(clientConnection, msgInflight);
+                MqttOutgoingMessageManager.Send(clientConnection, msgInflight);
             }
             // QoS 0, no need acknowledge
             else if (msgContext.Flow == MqttMsgFlow.ToAcknowledge)

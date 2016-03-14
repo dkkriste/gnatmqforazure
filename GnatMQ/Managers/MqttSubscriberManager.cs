@@ -27,7 +27,7 @@ namespace GnatMQForAzure.Managers
     /// <summary>
     /// Manager for topics and subscribers
     /// </summary>
-    public class MqttSubscriberManager
+    public static class MqttSubscriberManager
     {
         #region Constants ...
 
@@ -42,18 +42,18 @@ namespace GnatMQForAzure.Managers
         #endregion
 
         // MQTT subscription comparer
-        private readonly MqttSubscriptionComparer comparer;
+        private static readonly MqttSubscriptionComparer comparer;
 
         // subscribers list for each topic
-        private readonly ConcurrentDictionary<string, List<MqttSubscription>> subscribers;
+        private static readonly ConcurrentDictionary<string, List<MqttSubscription>> subscribers;
 
         /// <summary>
         /// Constructor
         /// </summary>
-        public MqttSubscriberManager()
+        static MqttSubscriberManager()
         {
-            this.subscribers = new ConcurrentDictionary<string, List<MqttSubscription>>();
-            this.comparer = new MqttSubscriptionComparer(MqttSubscriptionComparer.MqttSubscriptionComparerType.OnClientId);
+            subscribers = new ConcurrentDictionary<string, List<MqttSubscription>>();
+            comparer = new MqttSubscriptionComparer(MqttSubscriptionComparer.MqttSubscriptionComparerType.OnClientId);
         }
 
         /// <summary>
@@ -62,7 +62,7 @@ namespace GnatMQForAzure.Managers
         /// <param name="topic">Topic for subscription</param>
         /// <param name="qosLevel">QoS level for the topic subscription</param>
         /// <param name="clientConnection">Client to subscribe</param>
-        public void Subscribe(string topic, byte qosLevel, MqttClientConnection clientConnection)
+        public static void Subscribe(string topic, byte qosLevel, MqttClientConnection clientConnection)
         {
             string topicReplaced = topic.Replace(PLUS_WILDCARD, PLUS_WILDCARD_REPLACE).Replace(SHARP_WILDCARD, SHARP_WILDCARD_REPLACE);
 
@@ -89,12 +89,12 @@ namespace GnatMQForAzure.Managers
         /// </summary>
         /// <param name="topic">Topic for unsubscription</param>
         /// <param name="clientConnection">Client to unsubscribe</param>
-        public void Unsubscribe(string topic, MqttClientConnection clientConnection)
+        public static void Unsubscribe(string topic, MqttClientConnection clientConnection)
         {
             string topicReplaced = topic.Replace(PLUS_WILDCARD, PLUS_WILDCARD_REPLACE).Replace(SHARP_WILDCARD, SHARP_WILDCARD_REPLACE);
 
             List<MqttSubscription> subscriptionsForTopic;
-            if (this.subscribers.TryGetValue(topicReplaced, out subscriptionsForTopic))
+            if (subscribers.TryGetValue(topicReplaced, out subscriptionsForTopic))
             {
                 lock (subscriptionsForTopic)
                 {
@@ -116,9 +116,9 @@ namespace GnatMQForAzure.Managers
         /// Remove a subscriber for all topics
         /// </summary>
         /// <param name="clientConnection">Client to unsubscribe</param>
-        public void Unsubscribe(MqttClientConnection clientConnection)
+        public static void Unsubscribe(MqttClientConnection clientConnection)
         {
-            this.subscribers.Keys.AsParallel().ForAll(c => Unsubscribe(c, clientConnection));
+            subscribers.Keys.AsParallel().ForAll(c => Unsubscribe(c, clientConnection));
         }
 
         /// <summary>
@@ -127,18 +127,18 @@ namespace GnatMQForAzure.Managers
         /// <param name="topic">Topic to get subscription list</param>
         /// <param name="qosLevel">QoS level requested</param>
         /// <returns>Subscription list</returns>
-        public List<MqttSubscription> GetSubscriptions(string topic, byte qosLevel)
+        public static List<MqttSubscription> GetSubscriptions(string topic, byte qosLevel)
         {
-            var query = from ss in this.subscribers
+            var query = from ss in subscribers
                         where (new Regex(ss.Key)).IsMatch(topic)    // check for topics based also on wildcard with regex
-                        from s in this.subscribers[ss.Key]
+                        from s in subscribers[ss.Key]
                         where s.QosLevel == qosLevel                // check for subscriber only with a specified QoS level granted
                         select s;
 
             // use comparer for multiple subscriptions that overlap (e.g. /test/# and  /test/+/foo)
             // If a client is subscribed to multiple subscriptions with topics that overlap
             // it has more entries into subscriptions list but broker sends only one message
-            this.comparer.Type = MqttSubscriptionComparer.MqttSubscriptionComparerType.OnClientId;
+            comparer.Type = MqttSubscriptionComparer.MqttSubscriptionComparerType.OnClientId;
             return query.Distinct(comparer).ToList();
         }
 
@@ -148,18 +148,18 @@ namespace GnatMQForAzure.Managers
         /// <param name="topic">Topic to get subscription</param>
         /// <param name="clientId">Client Id to get subscription</param>
         /// <returns>Subscription list</returns>
-        public MqttSubscription GetSubscription(string topic, string clientId)
+        public static MqttSubscription GetSubscription(string topic, string clientId)
         {
-            var query = from ss in this.subscribers
+            var query = from ss in subscribers
                         where (new Regex(ss.Key)).IsMatch(topic)    // check for topics based also on wildcard with regex
-                        from s in this.subscribers[ss.Key]
+                        from s in subscribers[ss.Key]
                         where s.ClientId == clientId                // check for subscriber only with a specified Client Id
                         select s;
 
             // use comparer for multiple subscriptions that overlap (e.g. /test/# and  /test/+/foo)
             // If a client is subscribed to multiple subscriptions with topics that overlap
             // it has more entries into subscriptions list but broker sends only one message
-            this.comparer.Type = MqttSubscriptionComparer.MqttSubscriptionComparerType.OnClientId;
+            comparer.Type = MqttSubscriptionComparer.MqttSubscriptionComparerType.OnClientId;
             return query.Distinct(comparer).FirstOrDefault();
         }
 
@@ -168,17 +168,17 @@ namespace GnatMQForAzure.Managers
         /// </summary>
         /// <param name="topic">Topic to get subscription list</param>
         /// <returns>Subscription list</returns>
-        public List<MqttSubscription> GetSubscriptionsByTopic(string topic)
+        public static List<MqttSubscription> GetSubscriptionsByTopic(string topic)
         {
-            var query = from ss in this.subscribers
+            var query = from ss in subscribers
                         where (new Regex(ss.Key)).IsMatch(topic)    // check for topics based also on wildcard with regex
-                        from s in this.subscribers[ss.Key]
+                        from s in subscribers[ss.Key]
                         select s;
 
             // use comparer for multiple subscriptions that overlap (e.g. /test/# and  /test/+/foo)
             // If a client is subscribed to multiple subscriptions with topics that overlap
             // it has more entries into subscriptions list but broker sends only one message
-            this.comparer.Type = MqttSubscriptionComparer.MqttSubscriptionComparerType.OnClientId;
+            comparer.Type = MqttSubscriptionComparer.MqttSubscriptionComparerType.OnClientId;
             return query.Distinct(comparer).ToList();
         }
 
@@ -187,10 +187,10 @@ namespace GnatMQForAzure.Managers
         /// </summary>
         /// <param name="clientId">Client Id to get subscription list</param>
         /// <returns>Subscription lis</returns>
-        public List<MqttSubscription> GetSubscriptionsByClient(string clientId)
+        public static List<MqttSubscription> GetSubscriptionsByClient(string clientId)
         {
-            var query = from ss in this.subscribers
-                        from s in this.subscribers[ss.Key]
+            var query = from ss in subscribers
+                        from s in subscribers[ss.Key]
                         where s.ClientId == clientId
                         select s;
 
@@ -204,7 +204,7 @@ namespace GnatMQForAzure.Managers
             return query.ToList();
         }
 
-        private bool AlreadySubscribed(string clientId, List<MqttSubscription> currentSubscriptions)
+        private static bool AlreadySubscribed(string clientId, List<MqttSubscription> currentSubscriptions)
         {
             foreach (var subscription in currentSubscriptions)
             {
