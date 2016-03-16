@@ -123,8 +123,7 @@
 
                 // NOTE : I need to find on message id and flow because the broker could be publish/received
                 //        to/from client and message id could be the same (one tracked by broker and the other by client)
-                MqttClientConnection.MqttMsgContextFinder msgCtxFinder =
-                    new MqttClientConnection.MqttMsgContextFinder(msg.MessageId, MqttMsgFlow.ToAcknowledge);
+                MqttMsgContextFinder msgCtxFinder = new MqttMsgContextFinder(msg.MessageId, MqttMsgFlow.ToAcknowledge);
                 MqttMsgContext msgCtx = (MqttMsgContext)clientConnection.InflightQueue.FirstOrDefault(msgCtxFinder.Find);
 
                 // the PUBLISH message is alredy in the inflight queue, we don't need to re-enqueue but we need
@@ -224,8 +223,7 @@
 
                 // NOTE : I need to find on message id and flow because the broker could be publish/received
                 //        to/from client and message id could be the same (one tracked by broker and the other by client)
-                MqttClientConnection.MqttMsgContextFinder msgCtxFinder =
-                    new MqttClientConnection.MqttMsgContextFinder(msg.MessageId, MqttMsgFlow.ToAcknowledge);
+                MqttMsgContextFinder msgCtxFinder = new MqttMsgContextFinder(msg.MessageId, MqttMsgFlow.ToAcknowledge);
                 MqttMsgContext msgCtx = (MqttMsgContext)clientConnection.InflightQueue.FirstOrDefault(msgCtxFinder.Find);
 
                 // the PUBLISH message isn't in the inflight queue, it was already processed so
@@ -245,8 +243,7 @@
 
                 // NOTE : I need to find on message id and flow because the broker could be publish/received
                 //        to/from client and message id could be the same (one tracked by broker and the other by client)
-                MqttClientConnection.MqttMsgContextFinder msgCtxFinder =
-                    new MqttClientConnection.MqttMsgContextFinder(msg.MessageId, MqttMsgFlow.ToPublish);
+                MqttMsgContextFinder msgCtxFinder = new MqttMsgContextFinder(msg.MessageId, MqttMsgFlow.ToPublish);
                 MqttMsgContext msgCtx = (MqttMsgContext)clientConnection.InflightQueue.FirstOrDefault(msgCtxFinder.Find);
 
                 // the PUBLISH message isn't in the inflight queue, it was already sent so we need to ignore clientConnection PUBCOMP
@@ -264,8 +261,8 @@
 
                 // NOTE : I need to find on message id and flow because the broker could be publish/received
                 //        to/from client and message id could be the same (one tracked by broker and the other by client)
-                MqttClientConnection.MqttMsgContextFinder msgCtxFinder =
-                    new MqttClientConnection.MqttMsgContextFinder(msg.MessageId, MqttMsgFlow.ToPublish);
+                MqttMsgContextFinder msgCtxFinder =
+                    new MqttMsgContextFinder(msg.MessageId, MqttMsgFlow.ToPublish);
                 MqttMsgContext msgCtx = (MqttMsgContext)clientConnection.InflightQueue.FirstOrDefault(msgCtxFinder.Find);
 
                 // the PUBLISH message isn't in the inflight queue, it was already sent so we need to ignore rawMessage.ClientConnection PUBREC
@@ -278,6 +275,37 @@
             if (enqueue)
             {
                 clientConnection.InternalQueue.Enqueue(msg);
+            }
+        }
+
+        /// <summary>
+        /// Finder class for PUBLISH message inside a queue
+        /// </summary>
+        internal class MqttMsgContextFinder
+        {
+            // PUBLISH message id
+            internal ushort MessageId { get; set; }
+
+            // message flow into inflight queue
+            internal MqttMsgFlow Flow { get; set; }
+
+            /// <summary>
+            /// Constructor
+            /// </summary>
+            /// <param name="messageId">Message Id</param>
+            /// <param name="flow">Message flow inside inflight queue</param>
+            internal MqttMsgContextFinder(ushort messageId, MqttMsgFlow flow)
+            {
+                this.MessageId = messageId;
+                this.Flow = flow;
+            }
+
+            internal bool Find(object item)
+            {
+                MqttMsgContext msgCtx = (MqttMsgContext)item;
+                return (msgCtx.Message.Type == MqttMsgBase.MQTT_MSG_PUBLISH_TYPE) &&
+                        (msgCtx.Message.MessageId == this.MessageId) &&
+                        msgCtx.Flow == this.Flow;
             }
         }
     }

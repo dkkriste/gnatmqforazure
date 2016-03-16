@@ -10,14 +10,11 @@
 
     public class MqttClientConnectionManager : IMqttClientConnectionManager
     {
-        private readonly ConcurrentDictionary<Guid, MqttClientConnection> connectedClients;
-
-        private readonly ConcurrentStack<MqttClientConnection> unconnectedClients;
+        private readonly ConcurrentStack<MqttClientConnection> unconnectedClientPool;
 
         public MqttClientConnectionManager(MqttOptions options, MqttAsyncTcpReceiver receiver)
         {
-            connectedClients = new ConcurrentDictionary<Guid, MqttClientConnection>();
-            unconnectedClients = new ConcurrentStack<MqttClientConnection>();
+            unconnectedClientPool = new ConcurrentStack<MqttClientConnection>();
             var readSocketBufferManager = new BufferManager(options.MaxConnections, options.ReadAndSendBufferSize);
 
             for (var i = 0; i < options.MaxConnections; i++)
@@ -27,14 +24,14 @@
                 receiveSocketEventArg.Completed += receiver.ReceiveCompleted;
                 var clientConnection = new MqttClientConnection(receiveSocketEventArg);
 
-                unconnectedClients.Push(clientConnection);
+                unconnectedClientPool.Push(clientConnection);
             }
         }
 
         public MqttClientConnection GetConnection()
         {
             MqttClientConnection clientConnection;
-            if (unconnectedClients.TryPop(out clientConnection))
+            if (unconnectedClientPool.TryPop(out clientConnection))
             {
                 return clientConnection;
             }
@@ -44,8 +41,17 @@
 
         public void ReturnConnection(MqttClientConnection clientConnection)
         {
-            //TODO reset connection
-            unconnectedClients.Push(clientConnection);
+            try
+            {
+                clientConnection.ResetSocket();
+            }
+            catch (Exception)
+            {
+            }
+
+            clientConnection.Reset();
+
+            unconnectedClientPool.Push(clientConnection);
         }
     }
 }

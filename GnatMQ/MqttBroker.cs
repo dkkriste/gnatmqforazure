@@ -34,17 +34,17 @@ namespace GnatMQForAzure
     /// </summary>
     public class MqttBroker
     {
-        // MQTT broker settings
-        private MqttSettings settings;
-
         // clients connected list
-        private ConcurrentDictionary<string, MqttClientConnection> allConnectedClients;
+        private readonly ConcurrentDictionary<string, MqttClientConnection> allConnectedClients;
 
-        private MqttProcessingLoadbalancer processingLoadbalancer;
+        private readonly MqttProcessingLoadbalancer processingLoadbalancer;
 
-        private MqttClientConnectionProcessingManager[] processingManagers;
+        private readonly MqttClientConnectionProcessingManager[] processingManagers;
 
-        private MqttAsyncTcpSocketListener socketListener;
+        private readonly MqttAsyncTcpSocketListener socketListener;
+
+        // reference to User Access Control manager
+        private readonly MqttUacManager uacManager;
 
         private MqttRawMessageManager rawMessageManager;
 
@@ -52,20 +52,8 @@ namespace GnatMQForAzure
 
         private IMqttClientConnectionManager connectionManager;
 
-        // reference to publisher manager
-        private MqttPublishManager publishManager;
-        
-        // reference to User Access Control manager
-        private MqttUacManager uacManager;
-
-        /// <summary>
-        /// User authentication method
-        /// </summary>
-        public MqttUserAuthenticationDelegate UserAuth
-        {
-            get { return this.uacManager.UserAuth; }
-            set { this.uacManager.UserAuth = value; }
-        }
+        // MQTT broker settings
+        private MqttSettings settings;
 
         /// <summary>
         /// Constructor (TCP/IP communication layer on port 1883 and default settings)
@@ -92,7 +80,9 @@ namespace GnatMQForAzure
         /// <param name="sslProtocol">SSL/TLS protocol version</param>
         /// <param name="userCertificateSelectionCallback">A RemoteCertificateValidationCallback delegate responsible for validating the certificate supplied by the remote party</param>
         /// <param name="userCertificateValidationCallback">A LocalCertificateSelectionCallback delegate responsible for selecting the certificate used for authentication</param>
-        public MqttBroker(X509Certificate serverCert, MqttSslProtocols sslProtocol,
+        public MqttBroker(
+            X509Certificate serverCert, 
+            MqttSslProtocols sslProtocol,
             RemoteCertificateValidationCallback userCertificateValidationCallback,
             LocalCertificateSelectionCallback userCertificateSelectionCallback)
             : this(new MqttTcpCommunicationLayer(MqttSettings.MQTT_BROKER_DEFAULT_SSL_PORT, true, serverCert, sslProtocol, userCertificateValidationCallback, userCertificateSelectionCallback), MqttSettings.Instance)
@@ -111,8 +101,7 @@ namespace GnatMQForAzure
             // MQTT broker settings
             this.settings = settings;
 
-            // create managers (publisher, subscriber, session and UAC)
-            this.publishManager = new MqttPublishManager();
+            // create managers 
             this.uacManager = new MqttUacManager();
 
             this.allConnectedClients = new ConcurrentDictionary<string, MqttClientConnection>();
@@ -133,11 +122,21 @@ namespace GnatMQForAzure
         }
 
         /// <summary>
+        /// User authentication method
+        /// </summary>
+        public MqttUserAuthenticationDelegate UserAuth
+        {
+            get { return this.uacManager.UserAuth; }
+            set { this.uacManager.UserAuth = value; }
+        }
+
+        /// <summary>
         /// Start broker
         /// </summary>
         public void Start()
         {
-            this.publishManager.Start();
+            socketListener.Start();
+            processingLoadbalancer.Start();
 
             foreach (var processingManager in processingManagers)
             {
@@ -150,8 +149,9 @@ namespace GnatMQForAzure
         /// </summary>
         public void Stop()
         {
-            this.publishManager.Stop();
-
+            socketListener.Stop();
+            processingLoadbalancer.Stop();
+            
             foreach (var processingManager in processingManagers)
             {
                 processingManager.Stop();

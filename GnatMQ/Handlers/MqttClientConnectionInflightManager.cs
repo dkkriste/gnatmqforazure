@@ -2,6 +2,7 @@
 {
     using System;
     using System.Threading;
+    using System.Threading.Tasks;
 
     using GnatMQForAzure.Entities.Enums;
     using GnatMQForAzure.Events;
@@ -11,31 +12,27 @@
 
     public static class MqttClientConnectionInflightManager
     {
-        public static void ProcessInflightQueue(MqttClientConnection clientConnection)
+        public static void ProcessInflightQueue(InflightQueueProcessEvent processEvent)
         {
+            var clientConnection = processEvent.ClientConnection;
             if (!clientConnection.IsRunning)
+            {
+                return;
+            }
+
+            // Check if queue has been processed since callback was created
+            if (processEvent.IsCallback && clientConnection.InflightQueueLastProcessedTime != processEvent.CallbackCreationTime)
             {
                 return;
             }
 
             MqttMsgBase msgReceived = null;
             bool msgReceivedProcessed = false;
-
-            //TODO fix timeout
-
-            // message received and peeked from internal queue is processed
-            // NOTE : it has the corresponding message in inflight queue based on messageId
-            //        (ex. a PUBREC for a PUBLISH, a SUBACK for a SUBSCRIBE, ...)
-            //        if it's orphan we need to remove from internal queue
-
-            // set timeout tu MaxValue instead of Infinte (-1) to perform
-            // compare with calcultad current msgTimeout
-            int timeout = Int32.MaxValue;
+            int timeout = int.MaxValue;
 
             // a message inflight could be re-enqueued but we have to
             // analyze it only just one time for cycle
             int count = clientConnection.InflightQueue.Count;
-            // process all inflight queued messages
             while (count > 0 && clientConnection.IsRunning)
             {
                 count--;
@@ -45,7 +42,7 @@
                 MqttMsgContext msgContext;
                 if (!clientConnection.InflightQueue.TryDequeue(out msgContext))
                 {
-                    return;
+                    break;
                 }
 
                 // get inflight message
@@ -105,9 +102,6 @@
                 }
             }
 
-            // if calculated timeout is MaxValue, it means that must be Infinite (-1)
-            if (timeout == Int32.MaxValue) timeout = Timeout.Infinite;
-
             // if message received is orphan, no corresponding message in inflight queue
             // based on messageId, we need to remove from the queue
             if ((msgReceived != null) && !msgReceivedProcessed)
@@ -115,6 +109,19 @@
                 MqttMsgBase dequeuedMsg;
                 clientConnection.InternalQueue.TryDequeue(out dequeuedMsg);
             }
+
+            clientConnection.InflightQueueLastProcessedTime = Environment.TickCount;
+            if (!clientConnection.InflightQueue.IsEmpty)
+            {
+                var inflightQueueProcessEvent = new InflightQueueProcessEvent { ClientConnection = clientConnection, IsCallback = true, CallbackCreationTime = timeout };
+                Task.Factory.StartNew(() => SetTimer(inflightQueueProcessEvent, timeout));
+            }
+        }
+
+        private static async void SetTimer(InflightQueueProcessEvent processEvent, int timeout)
+        {
+            await Task.Delay(timeout);
+            processEvent.ClientConnection.EnqueueInflightCallback(processEvent);
         }
 
         private static int SendPubrel(MqttClientConnection clientConnection, MqttMsgContext msgContext, MqttMsgBase msgInflight, int timeout)

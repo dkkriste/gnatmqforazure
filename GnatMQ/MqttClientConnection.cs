@@ -68,92 +68,31 @@ namespace GnatMQForAzure
             ReceiveSocketAsyncEventArgs.UserToken = this;
      
             // set default MQTT protocol version (default is 3.1.1)
-            this.ProtocolVersion = MqttProtocolVersion.Version_3_1_1;
+            ProtocolVersion = MqttProtocolVersion.Version_3_1_1;
 
             // reference to MQTT settings
-            this.Settings = MqttSettings.Instance;
+            Settings = MqttSettings.Instance;
 
-            // client not connected yet (CONNACK not send from client), some default values
-            this.IsConnected = false;
-            this.ClientId = null;
-            this.CleanSession = true;
-
-            this.KeepAliveEvent = new AutoResetEvent(false);
+            KeepAliveEvent = new AutoResetEvent(false);
 
             // queue for handling inflight messages (publishing and acknowledge)
-            this.InflightQueue = new ConcurrentQueue<MqttMsgContext>();
+            InflightQueue = new ConcurrentQueue<MqttMsgContext>();
 
             // queue for received message
-            this.EventQueue = new ConcurrentQueue<InternalEvent>();
-            this.InternalQueue = new ConcurrentQueue<MqttMsgBase>();
+            EventQueue = new ConcurrentQueue<InternalEvent>();
+            InternalQueue = new ConcurrentQueue<MqttMsgBase>();
+
+            // client not connected yet (CONNACK not send from client), some default values
+            IsConnected = false;
+            ClientId = null;
+            CleanSession = true;
 
             // session
-            this.Session = null;
+            Session = null;
         }
 
         #endregion
     
-        #region Delegates and events
-
-        /// <summary>
-        /// Delagate that defines event handler for PUBLISH message received
-        /// </summary>
-        public delegate void MqttMsgPublishEventHandler(object sender, MqttMsgPublishEventArgs e);
-
-        /// <summary>
-        /// Delegate that defines event handler for published message
-        /// </summary>
-        public delegate void MqttMsgPublishedEventHandler(object sender, MqttMsgPublishedEventArgs e);
-
-        /// <summary>
-        /// Delagate that defines event handler for subscribed topic
-        /// </summary>
-        public delegate void MqttMsgSubscribedEventHandler(object sender, MqttMsgSubscribedEventArgs e);
-
-        /// <summary>
-        /// Delagate that defines event handler for unsubscribed topic
-        /// </summary>
-        public delegate void MqttMsgUnsubscribedEventHandler(object sender, MqttMsgUnsubscribedEventArgs e);
-
-        /// <summary>
-        /// Delagate that defines event handler for SUBSCRIBE message received
-        /// </summary>
-        public delegate void MqttMsgSubscribeEventHandler(object sender, MqttMsgSubscribeEventArgs e);
-
-        /// <summary>
-        /// Delagate that defines event handler for UNSUBSCRIBE message received
-        /// </summary>
-        public delegate void MqttMsgUnsubscribeEventHandler(object sender, MqttMsgUnsubscribeEventArgs e);
-
-        /// <summary>
-        /// Delagate that defines event handler for CONNECT message received
-        /// </summary>
-        public delegate void MqttMsgConnectEventHandler(object sender, MqttMsgConnectEventArgs e);
-
-        /// <summary>
-        /// Delegate that defines event handler for client disconnection (DISCONNECT message or not)
-        /// </summary>
-        public delegate void MqttMsgDisconnectEventHandler(object sender, EventArgs e);
-
-        /// <summary>
-        /// Delegate that defines event handler for cliet/peer disconnection
-        /// </summary>
-        public delegate void ConnectionClosedEventHandler(object sender, EventArgs e);
-
-        // event for published message
-        public event MqttMsgPublishedEventHandler MqttMsgPublished;
-        
-        // event for subscribed topic
-        public event MqttMsgSubscribedEventHandler MqttMsgSubscribed;
-        
-        // event for unsubscribed topic
-        public event MqttMsgUnsubscribedEventHandler MqttMsgUnsubscribed;
-        
-        // event for DISCONNECT message received
-        public event MqttMsgDisconnectEventHandler MqttMsgDisconnected;
-
-        #endregion
-
         #region Properties
 
         // running status of threads
@@ -225,7 +164,58 @@ namespace GnatMQForAzure
         /// </summary>
         public MqttSettings Settings { get; private set; }
 
+        public int InflightQueueLastProcessedTime { get; set; }
+
         #endregion
+
+        public void ResetSocket()
+        {
+            ReceiveSocketAsyncEventArgs.AcceptSocket = null;
+            ReceiveSocketAsyncEventArgs.SetBuffer(ReceiveSocketOffset, ReceiveSocketBufferSize);
+        }
+
+        public void Reset()
+        {
+            ProcessingManager = null;
+
+            LastCommunicationTime = 0;
+            KeepAlivePeriod = 0;
+            messageIdCounter = 0;
+
+            InflightQueueLastProcessedTime = 0;
+
+            ClientId = string.Empty;
+            IsRunning = false;
+            IsConnected = false;
+            IsConnectionClosing = false;
+            CleanSession = true;
+            WillFlag = false;
+            WillQosLevel = MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE;
+            WillTopic = string.Empty;
+            WillMessage = string.Empty;
+            ProtocolVersion = MqttProtocolVersion.Version_3_1_1;
+            Session = null;
+
+            MqttMsgContext msgContext;
+            while (InflightQueue.TryDequeue(out msgContext))
+            {
+            }
+
+            MqttMsgBase message;
+            while (InternalQueue.TryDequeue(out message))
+            {
+            }
+
+            InternalEvent internalEvent;
+            while (EventQueue.TryDequeue(out internalEvent))
+            {
+            }
+
+            if (!InflightQueue.IsEmpty || !InternalQueue.IsEmpty || !EventQueue.IsEmpty)
+            {
+                throw new Exception("Failed to empty queues");
+            }
+        }
 
         public void EnqueueInternalEvent(InternalEvent internalEvent)
         {
@@ -241,7 +231,15 @@ namespace GnatMQForAzure
             if (ProcessingManager != null)
             {
                 InflightQueue.Enqueue(inflightMessageContext);
-                ProcessingManager.EnqueueClientConnectionWithInflightQueueToProcess(this);
+                ProcessingManager.EnqueueClientConnectionWithInflightQueueToProcess(new InflightQueueProcessEvent { ClientConnection = this, IsCallback = false });
+            }
+        }
+
+        public void EnqueueInflightCallback(InflightQueueProcessEvent processEvent)
+        {
+            if (ProcessingManager != null)
+            {
+                ProcessingManager.EnqueueClientConnectionWithInflightQueueToProcess(processEvent);
             }
         }
 
@@ -266,14 +264,6 @@ namespace GnatMQForAzure
             if (ProcessingManager != null)
             {
                 ProcessingManager.OnMqttMsgConnected(this, connect);
-            }
-        }
-
-        public void OnMqttMsgDisconnected()
-        {
-            if (this.MqttMsgDisconnected != null)
-            {
-                this.MqttMsgDisconnected(this, EventArgs.Empty);
             }
         }
 
@@ -383,37 +373,6 @@ namespace GnatMQForAzure
             {
                 if (this.Session != null)
                     this.Session.Clear();
-            }
-        }
-
-        /// <summary>
-        /// Finder class for PUBLISH message inside a queue
-        /// </summary>
-        internal class MqttMsgContextFinder
-        {
-            // PUBLISH message id
-            internal ushort MessageId { get; set; }
-            // message flow into inflight queue
-            internal MqttMsgFlow Flow { get; set; }
-
-            /// <summary>
-            /// Constructor
-            /// </summary>
-            /// <param name="messageId">Message Id</param>
-            /// <param name="flow">Message flow inside inflight queue</param>
-            internal MqttMsgContextFinder(ushort messageId, MqttMsgFlow flow)
-            {
-                this.MessageId = messageId;
-                this.Flow = flow;
-            }
-
-            internal bool Find(object item)
-            {
-                MqttMsgContext msgCtx = (MqttMsgContext)item;
-                return ((msgCtx.Message.Type == MqttMsgBase.MQTT_MSG_PUBLISH_TYPE) &&
-                        (msgCtx.Message.MessageId == this.MessageId) &&
-                        msgCtx.Flow == this.Flow);
-
             }
         }
     }

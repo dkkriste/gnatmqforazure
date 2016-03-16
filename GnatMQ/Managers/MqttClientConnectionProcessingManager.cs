@@ -4,11 +4,13 @@
     using System.Collections.Concurrent;
     using System.Collections.Generic;
     using System.Text;
+    using System.Threading;
     using System.Threading.Tasks;
 
     using GnatMQForAzure.Contracts;
     using GnatMQForAzure.Entities;
     using GnatMQForAzure.Entities.Enums;
+    using GnatMQForAzure.Events;
     using GnatMQForAzure.Handlers;
     using GnatMQForAzure.Messages;
     using GnatMQForAzure.Session;
@@ -26,7 +28,7 @@
 
         private readonly BlockingCollection<MqttRawMessage> rawMessageQueue;
 
-        private readonly BlockingCollection<MqttClientConnection> clientConnectionsWithInflightQueuesToProcess;
+        private readonly BlockingCollection<InflightQueueProcessEvent> clientConnectionsWithInflightQueuesToProcess;
 
         private readonly BlockingCollection<MqttClientConnection> clientConnectionsWithInternalEventQueuesToProcess;
 
@@ -41,8 +43,9 @@
             this.logger = logger;
             this.allConnectedClients = allConnectedClients;
             this.uacManager = uacManager;
+            publishManager = new MqttPublishManager();
             rawMessageQueue = new BlockingCollection<MqttRawMessage>();
-            clientConnectionsWithInflightQueuesToProcess = new BlockingCollection<MqttClientConnection>();
+            clientConnectionsWithInflightQueuesToProcess = new BlockingCollection<InflightQueueProcessEvent>();
             clientConnectionsWithInternalEventQueuesToProcess = new BlockingCollection<MqttClientConnection>();
         }
 
@@ -53,6 +56,7 @@
         public void Start()
         {
             isRunning = true;
+            publishManager.Start();
             Fx.StartThread(ProcessRawMessageQueue);
             Fx.StartThread(ProcessInflightQueue);
             Fx.StartThread(ProcessInternalEventQueue);
@@ -75,9 +79,9 @@
             clientConnectionsWithInternalEventQueuesToProcess.Add(clientConnection);
         }
 
-        public void EnqueueClientConnectionWithInflightQueueToProcess(MqttClientConnection clientConnection)
+        public void EnqueueClientConnectionWithInflightQueueToProcess(InflightQueueProcessEvent processEvent)
         {
-            clientConnectionsWithInflightQueuesToProcess.Add(clientConnection);
+            clientConnectionsWithInflightQueuesToProcess.Add(processEvent);
         }
 
         #endregion
@@ -106,8 +110,8 @@
             {
                 try
                 {
-                    var clientConnection = clientConnectionsWithInflightQueuesToProcess.Take();
-                    MqttClientConnectionInflightManager.ProcessInflightQueue(clientConnection);
+                    var processEvent = clientConnectionsWithInflightQueuesToProcess.Take();
+                    MqttClientConnectionInflightManager.ProcessInflightQueue(processEvent);
                 }
                 catch (Exception exception)
                 {
@@ -187,7 +191,7 @@
 
                 // add client to the collection
                 allConnectedClients.TryAdd(clientId, clientConnection);
-                numberOfConnectedClients++;
+                Interlocked.Increment(ref numberOfConnectedClients);
             }
 
             // connection accepted, load (if exists) client session
@@ -268,8 +272,7 @@
         {
             // if client is connected
             MqttClientConnection connectedClient;
-            if (clientConnection.IsConnected
-                && this.allConnectedClients.TryRemove(clientConnection.ClientId, out connectedClient))
+            if (clientConnection.IsConnected && this.allConnectedClients.TryRemove(clientConnection.ClientId, out connectedClient))
             {
                 // client has a will message
                 if (clientConnection.WillFlag)
@@ -299,12 +302,7 @@
 
                 // close the client
                 CloseClientConnection(clientConnection);
-                numberOfConnectedClients--;
-            }
-            else
-            {
-                //TODO
-                numberOfAssignedClients--;
+                Interlocked.Decrement(ref numberOfConnectedClients);
             }
         }
 

@@ -55,6 +55,7 @@
     <Compile Include="Communication\MqttAsyncTcpReceiver.cs" />
     <Compile Include="Communication\MqttClientConnectedEventHandler.cs" />
     <Compile Include="Contracts\IMqttRunnable.cs" />
+    <Compile Include="Events\InflightQueueProcessEvent.cs" />
     <Compile Include="Exceptions\MqttClientErrorCode.cs" />
     <Compile Include="Exceptions\MqttClientException.cs" />
     <Compile Include="Exceptions\MqttCommunicationException.cs" />
@@ -69,7 +70,7 @@
     <Compile Include="Handlers\MqttClientConnectionInternalEventManager.cs" />
     <Compile Include="Managers\MqttClientConnectionProcessingManager.cs" />
     <Compile Include="Managers\MqttClientConnectionManager.cs" />
-    <Compile Include="Handlers\MqttClientConnectionIncomingMessageManager.cs" />
+    <Compile Include="Handlers\MqttMessageToClientConnectionManager.cs" />
     <Compile Include="Managers\MqttClientConnectionTimeoutManager.cs" />
     <Compile Include="Managers\MqttOutgoingMessageManager.cs" />
     <Compile Include="Managers\MqttProcessingLoadbalancer.cs" />

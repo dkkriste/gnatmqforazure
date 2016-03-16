@@ -68,7 +68,8 @@
 
             e.AcceptSocket.Close();
 
-            //TODO signal close
+            var clientConnection = (MqttClientConnection)e.UserToken;
+            clientConnection.OnConnectionClosed();
         }
 
         private void TryProcessMessage(MqttClientConnection clientConnection, SocketAsyncEventArgs receiveSendEventArgs)
