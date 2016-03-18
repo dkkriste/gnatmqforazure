@@ -28,7 +28,6 @@
             ProcessReceive(e);
         }
 
-
         private void ProcessReceive(SocketAsyncEventArgs receiveSendEventArgs)
         {
             var clientConnection = (MqttClientConnection)receiveSendEventArgs.UserToken;
@@ -90,7 +89,7 @@
                         clientConnection.EnqueueRawMessage(rawMessage);
                         bufferOffset += payloadLength;
                         remainingBytesToProcess -= payloadLength;
-                        lastProcessedByteByCompleteMessage = bufferOffset;
+                        lastProcessedByteByCompleteMessage = bufferOffset - clientConnection.ReceiveSocketOffset;
                     }
                     else
                     {
@@ -100,7 +99,7 @@
                 catch (AggregateException)
                 {
                     var unprocessedStart = lastProcessedByteByCompleteMessage + 1;
-                    var totalUnprocessedBytes = (clientConnection.ReceiveSocketOffset + clientConnection.PreviouslyReceivedBytes + receiveSendEventArgs.BytesTransferred) - unprocessedStart;
+                    var totalUnprocessedBytes = (clientConnection.PreviouslyReceivedBytes + receiveSendEventArgs.BytesTransferred) - unprocessedStart;
                     if (lastProcessedByteByCompleteMessage > 0)
                     {
                         Buffer.BlockCopy(receiveSendEventArgs.Buffer, clientConnection.ReceiveSocketOffset + unprocessedStart, receiveSendEventArgs.Buffer, clientConnection.ReceiveSocketOffset, totalUnprocessedBytes);

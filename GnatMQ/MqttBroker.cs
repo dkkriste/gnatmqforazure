@@ -18,6 +18,7 @@ Contributors:
 namespace GnatMQForAzure
 {
     using System.Collections.Concurrent;
+    using System.Net;
     using System.Net.Security;
     using System.Security.Cryptography.X509Certificates;
 
@@ -26,16 +27,17 @@ namespace GnatMQForAzure
     using GnatMQForAzure.Entities;
     using GnatMQForAzure.Entities.Delegates;
     using GnatMQForAzure.Entities.Enums;
-    using GnatMQForAzure.Handlers;
     using GnatMQForAzure.Managers;
 
     /// <summary>
     /// MQTT broker business logic
     /// </summary>
-    public class MqttBroker
+    public class MqttBroker : IPeriodicallyLoggable
     {
         // clients connected list
-        private readonly ConcurrentDictionary<string, MqttClientConnection> allConnectedClients;
+        private static readonly ConcurrentDictionary<string, MqttClientConnection> AllConnectedClients = new ConcurrentDictionary<string, MqttClientConnection>();
+
+        private readonly ILogger logger;
 
         private readonly MqttProcessingLoadbalancer processingLoadbalancer;
 
@@ -55,69 +57,36 @@ namespace GnatMQForAzure
         // MQTT broker settings
         private MqttSettings settings;
 
-        /// <summary>
-        /// Constructor (TCP/IP communication layer on port 1883 and default settings)
-        /// </summary>
-        public MqttBroker()
-            : this(new MqttTcpCommunicationLayer(MqttSettings.MQTT_BROKER_DEFAULT_PORT), MqttSettings.Instance)
+        public MqttBroker(ILogger logger, MqttOptions options)
+            : this(logger, options, MqttSettings.Instance)
         {
         }
 
-        /// <summary>
-        /// Constructor (TCP/IP communication layer on port 8883 with SSL/TLS and default settings)
-        /// </summary>
-        /// <param name="serverCert">X509 Server certificate</param>
-        /// <param name="sslProtocol">SSL/TLS protocol versiokn</param>
-        public MqttBroker(X509Certificate serverCert, MqttSslProtocols sslProtocol)
-            : this(new MqttTcpCommunicationLayer(MqttSettings.MQTT_BROKER_DEFAULT_SSL_PORT, true, serverCert, sslProtocol, null, null), MqttSettings.Instance)
+        public MqttBroker(ILogger logger, MqttOptions options, MqttSettings settings)
         {
-        }
+            this.logger = logger;
 
-        /// <summary>
-        /// Constructor (TCP/IP communication layer on port 8883 with SSL/TLS and default settings)
-        /// </summary>
-        /// <param name="serverCert">X509 Server certificate</param>
-        /// <param name="sslProtocol">SSL/TLS protocol version</param>
-        /// <param name="userCertificateSelectionCallback">A RemoteCertificateValidationCallback delegate responsible for validating the certificate supplied by the remote party</param>
-        /// <param name="userCertificateValidationCallback">A LocalCertificateSelectionCallback delegate responsible for selecting the certificate used for authentication</param>
-        public MqttBroker(
-            X509Certificate serverCert, 
-            MqttSslProtocols sslProtocol,
-            RemoteCertificateValidationCallback userCertificateValidationCallback,
-            LocalCertificateSelectionCallback userCertificateSelectionCallback)
-            : this(new MqttTcpCommunicationLayer(MqttSettings.MQTT_BROKER_DEFAULT_SSL_PORT, true, serverCert, sslProtocol, userCertificateValidationCallback, userCertificateSelectionCallback), MqttSettings.Instance)
-        {
-        }
-
-        /// <summary>
-        /// Constructor
-        /// </summary>
-        /// <param name="commLayer">Communication layer to use (TCP)</param>
-        /// <param name="settings">Broker settings</param>
-        public MqttBroker(IMqttCommunicationLayer commLayer, MqttSettings settings)
-        {
-            var options = new MqttOptions();
-            ILogger logger = null;
             // MQTT broker settings
             this.settings = settings;
 
             // create managers 
             this.uacManager = new MqttUacManager();
 
-            this.allConnectedClients = new ConcurrentDictionary<string, MqttClientConnection>();
+            MqttAsyncTcpSender.Init(options);
+
+            this.rawMessageManager = new MqttRawMessageManager(options);
+            this.asyncTcpReceiver = new MqttAsyncTcpReceiver(rawMessageManager);
+            this.connectionManager = new MqttClientConnectionManager(options, asyncTcpReceiver);
 
             var numberOfProcessingManagersNeeded = options.MaxConnections / options.ConnectionsPrProcessingManager;
             this.processingManagers = new MqttClientConnectionProcessingManager[numberOfProcessingManagersNeeded];
             for (var i = 0; i < processingManagers.Length; i++)
             {
-                processingManagers[i] = new MqttClientConnectionProcessingManager(logger, allConnectedClients, uacManager);
+                processingManagers[i] = new MqttClientConnectionProcessingManager(logger, uacManager, asyncTcpReceiver);
             }
 
             this.processingLoadbalancer = new MqttProcessingLoadbalancer(logger, processingManagers);
 
-            this.rawMessageManager = new MqttRawMessageManager(options);
-            this.asyncTcpReceiver = new MqttAsyncTcpReceiver(rawMessageManager);
-            this.connectionManager = new MqttClientConnectionManager(options, asyncTcpReceiver);
             this.socketListener = new MqttAsyncTcpSocketListener(processingLoadbalancer, connectionManager, options);
         }
 
@@ -131,12 +100,39 @@ namespace GnatMQForAzure
         }
 
         /// <summary>
+        /// Return reference to a client with a specified Id is already connected
+        /// </summary>
+        /// <param name="clientId">Client Id to verify</param>
+        /// <returns>Reference to client</returns>
+        public static MqttClientConnection GetClientConnection(string clientId)
+        {
+            MqttClientConnection connectedClient;
+            if (AllConnectedClients.TryGetValue(clientId, out connectedClient))
+            {
+                return connectedClient;
+            }
+
+            return null;
+        }
+
+        public static bool TryAddClientConnection(string clientId, MqttClientConnection clientConnection)
+        {
+            return AllConnectedClients.TryAdd(clientId, clientConnection);
+        }
+
+        public static bool TryRemoveClientConnection(string clientId, out MqttClientConnection clientConnection)
+        {
+            return AllConnectedClients.TryRemove(clientId, out clientConnection);
+        }
+
+        /// <summary>
         /// Start broker
         /// </summary>
         public void Start()
         {
             socketListener.Start();
             processingLoadbalancer.Start();
+            RetainedMessageManager.Start();
 
             foreach (var processingManager in processingManagers)
             {
@@ -151,6 +147,7 @@ namespace GnatMQForAzure
         {
             socketListener.Stop();
             processingLoadbalancer.Stop();
+            RetainedMessageManager.Stop();
             
             foreach (var processingManager in processingManagers)
             {
@@ -162,6 +159,16 @@ namespace GnatMQForAzure
             //{
             //    client.Close();
             //}
+        }
+
+        public void PeriodicLogging()
+        {
+            processingLoadbalancer.PeriodicLogging();
+
+            foreach (var processingManager in processingManagers)
+            {
+                processingManager.PeriodicLogging();
+            }
         }
     }
 }

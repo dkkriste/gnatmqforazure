@@ -8,7 +8,7 @@
     using GnatMQForAzure.Entities;
     using GnatMQForAzure.Utility;
 
-    public class MqttProcessingLoadbalancer : IMqttRunnable, IMqttClientConnectionStarter
+    public class MqttProcessingLoadbalancer : IMqttRunnable, IMqttClientConnectionStarter, IPeriodicallyLoggable
     {
         private readonly ILogger logger;
 
@@ -17,6 +17,8 @@
         private readonly AutoResetEvent loadbalanceAwaitHandler;
 
         private int indexOfProcessingManagerToGetNextConnection;
+
+        private int numberOfConnectionsLoadbalanced;
 
         private bool isRunning;
 
@@ -38,10 +40,18 @@
             this.isRunning = false;
         }
 
+        public void PeriodicLogging()
+        {
+            var loadbalancedCopy = numberOfConnectionsLoadbalanced;
+            logger.LogMetric(this, LoggerConstants.NumberOfConnectionsLoadbalanced, loadbalancedCopy);
+            Interlocked.Add(ref numberOfConnectionsLoadbalanced, -loadbalancedCopy);
+        }
+
         public void OpenClientConnection(MqttClientConnection clientConnection)
         {
             processingManagers[indexOfProcessingManagerToGetNextConnection].OpenClientConnection(clientConnection);
             loadbalanceAwaitHandler.Set();
+            Interlocked.Increment(ref numberOfConnectionsLoadbalanced);
         }
 
         private void Loadbalancer()

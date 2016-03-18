@@ -80,7 +80,7 @@ namespace GnatMQForAzure.Messages
             this.qosLevel = QOS_LEVEL_AT_LEAST_ONCE;
         }
 
-        public static MqttMsgSubscribe Parse(byte fixedHeaderFirstByte, byte protocolVersion, byte[] buffer)
+        public static MqttMsgSubscribe Parse(byte fixedHeaderFirstByte, byte protocolVersion, byte[] buffer, int messageLength)
         {
             
             int index = 0;
@@ -95,8 +95,7 @@ namespace GnatMQForAzure.Messages
                     throw new MqttClientException(MqttClientErrorCode.InvalidFlagBits);
             }
 
-            // get remaining length and allocate buffer
-            int remainingLength = buffer.Length;
+            int remainingLength = messageLength;
 
             if (protocolVersion == MqttMsgConnect.PROTOCOL_VERSION_V3_1)
             {

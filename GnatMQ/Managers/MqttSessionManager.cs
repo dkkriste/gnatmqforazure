@@ -30,14 +30,11 @@ namespace GnatMQForAzure.Managers
     public static class MqttSessionManager
     {
         // subscription info for each client
-        private static readonly ConcurrentDictionary<string, MqttBrokerSession> sessions;
+        private static readonly ConcurrentDictionary<string, MqttBrokerSession> Sessions;
 
-        /// <summary>
-        /// Constructor
-        /// </summary>
         static MqttSessionManager()
         {
-            sessions = new ConcurrentDictionary<string, MqttBrokerSession>();
+            Sessions = new ConcurrentDictionary<string, MqttBrokerSession>();
         }
 
         /// <summary>
@@ -51,19 +48,19 @@ namespace GnatMQForAzure.Managers
             MqttBrokerSession session = null;
 
             // session doesn't exist
-            if (!sessions.ContainsKey(clientId))
+            if (!Sessions.ContainsKey(clientId))
             {
                 // create new session
                 session = new MqttBrokerSession();
                 session.ClientId = clientId;
 
                 // add to sessions list
-                sessions.TryAdd(clientId, session);
+                Sessions.TryAdd(clientId, session);
             }
             else
             {
                 // get existing session
-                session = sessions[clientId];
+                session = Sessions[clientId];
             }
 
             // null reference to disconnected client
@@ -91,13 +88,13 @@ namespace GnatMQForAzure.Managers
         /// <returns>Subscriptions for the client</returns>
         public static MqttBrokerSession GetSession(string clientId)
         {
-            if (!sessions.ContainsKey(clientId))
+            if (!Sessions.ContainsKey(clientId))
             {
                 return null;
             }
             else
             {
-                return sessions[clientId];
+                return Sessions[clientId];
             }
         }
 
@@ -108,7 +105,7 @@ namespace GnatMQForAzure.Managers
         public static List<MqttBrokerSession> GetSessions()
         {
             // TODO : verificare altro modo
-            return new List<MqttBrokerSession>(sessions.Values);
+            return new List<MqttBrokerSession>(Sessions.Values);
         }
 
         /// <summary>
@@ -117,12 +114,12 @@ namespace GnatMQForAzure.Managers
         /// <param name="clientId">Client Id to clear session</param>
         public static void ClearSession(string clientId)
         {
-            if (sessions.ContainsKey(clientId))
+            if (Sessions.ContainsKey(clientId))
             {
                 // clear and remove client session
-                sessions[clientId].Clear();
+                Sessions[clientId].Clear();
                 MqttBrokerSession sessionToBeRemoved;
-                sessions.TryRemove(clientId, out sessionToBeRemoved);
+                Sessions.TryRemove(clientId, out sessionToBeRemoved);
             }
         }
     }

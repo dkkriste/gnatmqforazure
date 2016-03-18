@@ -45,6 +45,7 @@
     <Compile Include="Contracts\ILogger.cs" />
     <Compile Include="Contracts\IMqttClientConnectionManager.cs" />
     <Compile Include="Contracts\IMqttClientConnectionStarter.cs" />
+    <Compile Include="Contracts\IPeriodicallyLoggable.cs" />
     <Compile Include="Entities\BufferManager.cs" />
     <Compile Include="Entities\MqttOptions.cs" />
     <Compile Include="Entities\MqttRawMessage.cs" />
@@ -76,6 +77,8 @@
     <Compile Include="Managers\MqttProcessingLoadbalancer.cs" />
     <Compile Include="Managers\MqttRawMessageManager.cs" />
     <Compile Include="Managers\MqttSubscription.cs" />
+    <Compile Include="Managers\RetainedMessageManager.cs" />
+    <Compile Include="Utility\LoggerConstants.cs" />
     <Compile Include="Utility\MqttSubscriptionComparer.cs" />
     <Compile Include="Entities\Delegates\MqttUserAuthenticationDelegate.cs" />
     <Compile Include="Messages\MqttMsgFlow.cs" />

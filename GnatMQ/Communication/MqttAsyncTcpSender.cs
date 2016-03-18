@@ -37,9 +37,20 @@
             SocketAsyncEventArgs socketArgs;
             if (sendBufferEventArgsPool.TryPop(out socketArgs))
             {
-                socketArgs.AcceptSocket = socket;
-                Buffer.BlockCopy(message, 0, socketArgs.Buffer, socketArgs.Offset, message.Length);
-                StartSend(socketArgs);
+                try
+                {
+                    socketArgs.AcceptSocket = socket;
+                    var sendSocketArgs = (SendSocketArgs)socketArgs.UserToken;
+                    Buffer.BlockCopy(message, 0, socketArgs.Buffer, sendSocketArgs.BufferOffset, message.Length);
+                    socketArgs.SetBuffer(sendSocketArgs.BufferOffset, message.Length);
+                    StartSend(socketArgs);
+                }
+                catch (Exception exception)
+                {
+                    Console.WriteLine(exception);
+                    throw;
+                }
+                
             }
             else
             {

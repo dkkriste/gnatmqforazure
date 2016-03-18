@@ -4,10 +4,10 @@
 
     public interface ILogger
     {
-        void LogException(Exception exception);
+        void LogException(object sender, Exception exception);
 
-        void LogEvent(string eventName, string message);
+        void LogEvent(object sender, string eventName, string message);
 
-        void LogMetric(string metricName, double value);
+        void LogMetric(object sender, string metricName, double value);
     }
 }

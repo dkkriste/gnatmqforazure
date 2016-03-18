@@ -7,6 +7,7 @@
     using System.Threading;
     using System.Threading.Tasks;
 
+    using GnatMQForAzure.Communication;
     using GnatMQForAzure.Contracts;
     using GnatMQForAzure.Entities;
     using GnatMQForAzure.Entities.Enums;
@@ -16,15 +17,15 @@
     using GnatMQForAzure.Session;
     using GnatMQForAzure.Utility;
 
-    public class MqttClientConnectionProcessingManager : IMqttRunnable, IMqttClientConnectionStarter
+    public class MqttClientConnectionProcessingManager : IMqttRunnable, IMqttClientConnectionStarter, IPeriodicallyLoggable
     {
         private readonly ILogger logger;
-
-        private readonly ConcurrentDictionary<string, MqttClientConnection> allConnectedClients;
 
         private readonly MqttPublishManager publishManager;
 
         private readonly MqttUacManager uacManager;
+
+        private readonly MqttAsyncTcpReceiver asyncTcpReceiver;
 
         private readonly BlockingCollection<MqttRawMessage> rawMessageQueue;
 
@@ -38,12 +39,22 @@
 
         private int numberOfAssignedClients;
 
-        public MqttClientConnectionProcessingManager(ILogger logger, ConcurrentDictionary<string, MqttClientConnection> allConnectedClients, MqttUacManager uacManager)
+        #region Logging
+
+        private int numberOfRawMessagsProcessed;
+
+        private int numberOfInflightQueuesProcessed;
+
+        private int numberOfInternalEventQueuesProcessed;
+
+        #endregion
+
+        public MqttClientConnectionProcessingManager(ILogger logger, MqttUacManager uacManager, MqttAsyncTcpReceiver asyncTcpReceiver)
         {
             this.logger = logger;
-            this.allConnectedClients = allConnectedClients;
             this.uacManager = uacManager;
-            publishManager = new MqttPublishManager();
+            this.asyncTcpReceiver = asyncTcpReceiver;
+            publishManager = new MqttPublishManager(logger);
             rawMessageQueue = new BlockingCollection<MqttRawMessage>();
             clientConnectionsWithInflightQueuesToProcess = new BlockingCollection<InflightQueueProcessEvent>();
             clientConnectionsWithInternalEventQueuesToProcess = new BlockingCollection<MqttClientConnection>();
@@ -65,6 +76,28 @@
         public void Stop()
         {
             isRunning = false;
+            publishManager.Stop();
+        }
+
+        public void PeriodicLogging()
+        {
+            logger.LogMetric(this, LoggerConstants.NumberOfConnectedClients, numberOfConnectedClients);
+            logger.LogMetric(this, LoggerConstants.RawMessageQueueSize, rawMessageQueue.Count);
+            logger.LogMetric(this, LoggerConstants.InflightQueuesToProcessSize, clientConnectionsWithInflightQueuesToProcess.Count);
+            logger.LogMetric(this, LoggerConstants.EventQueuesToProcessSize, clientConnectionsWithInternalEventQueuesToProcess.Count);
+
+            var rawMessageCopy = numberOfRawMessagsProcessed;
+            var inflightCopy = numberOfInflightQueuesProcessed;
+            var internalEventCopy = numberOfInternalEventQueuesProcessed;
+            logger.LogMetric(this, LoggerConstants.NumberOfRawMessagsProcessed, rawMessageCopy);
+            logger.LogMetric(this, LoggerConstants.NumberOfInflightQueuesProcessed, inflightCopy);
+            logger.LogMetric(this, LoggerConstants.NumberOfInternalEventQueuesProcessed, internalEventCopy);
+
+            Interlocked.Add(ref numberOfRawMessagsProcessed, -rawMessageCopy);
+            Interlocked.Add(ref numberOfInflightQueuesProcessed, -inflightCopy);
+            Interlocked.Add(ref numberOfInternalEventQueuesProcessed, -internalEventCopy);
+
+            publishManager.PeriodicLogging();
         }
 
         #region Enqueuing
@@ -96,10 +129,11 @@
                 {
                     var rawMessage = rawMessageQueue.Take();
                     MqttMessageToClientConnectionManager.ProcessReceivedMessage(rawMessage);
+                    Interlocked.Increment(ref numberOfRawMessagsProcessed);
                 }
                 catch (Exception exception)
                 {
-                    logger.LogException(exception);
+                    logger.LogException(this, exception);
                 }
             }
         }
@@ -112,10 +146,11 @@
                 {
                     var processEvent = clientConnectionsWithInflightQueuesToProcess.Take();
                     MqttClientConnectionInflightManager.ProcessInflightQueue(processEvent);
+                    Interlocked.Increment(ref numberOfInflightQueuesProcessed);
                 }
                 catch (Exception exception)
                 {
-                    logger.LogException(exception);
+                    logger.LogException(this, exception);
                 }
             }
         }
@@ -128,10 +163,11 @@
                 {
                     var clientConnection = clientConnectionsWithInternalEventQueuesToProcess.Take();
                     MqttClientConnectionInternalEventManager.ProcessInternalEventQueue(clientConnection);
+                    Interlocked.Increment(ref numberOfInternalEventQueuesProcessed);
                 }
                 catch (Exception exception)
                 {
-                    logger.LogException(exception);
+                    logger.LogException(this, exception);
                 }
             }
         }
@@ -143,6 +179,7 @@
             numberOfAssignedClients++;
             clientConnection.IsRunning = true;
             clientConnection.ProcessingManager = this;
+            asyncTcpReceiver.StartReceive(clientConnection.ReceiveSocketAsyncEventArgs);
             Task.Factory.StartNew(() => CheckForClientTimeout(clientConnection));
         }
 
@@ -181,7 +218,7 @@
             if (returnCode == MqttMsgConnack.CONN_ACCEPTED)
             {
                 // check if there is a client already connected with same client Id
-                MqttClientConnection clientConnectionConnected = GetClient(clientId);
+                MqttClientConnection clientConnectionConnected = MqttBroker.GetClientConnection(clientId);
 
                 // force connection close to the existing client (MQTT protocol)
                 if (clientConnectionConnected != null)
@@ -190,7 +227,7 @@
                 }
 
                 // add client to the collection
-                allConnectedClients.TryAdd(clientId, clientConnection);
+                MqttBroker.TryAddClientConnection(clientId, clientConnection);
                 Interlocked.Increment(ref numberOfConnectedClients);
             }
 
@@ -240,7 +277,7 @@
                                     clientConnection);
 
                                 // publish retained message on the current subscription
-                                this.publishManager.PublishRetaind(subscription.Topic, clientId);
+                                RetainedMessageManager.PublishRetaind(subscription.Topic, clientId);
                             }
                         }
 
@@ -272,7 +309,7 @@
         {
             // if client is connected
             MqttClientConnection connectedClient;
-            if (clientConnection.IsConnected && this.allConnectedClients.TryRemove(clientConnection.ClientId, out connectedClient))
+            if (clientConnection.IsConnected && MqttBroker.TryRemoveClientConnection(clientConnection.ClientId, out connectedClient))
             {
                 // client has a will message
                 if (clientConnection.WillFlag)
@@ -334,7 +371,7 @@
             for (int i = 0; i < topics.Length; i++)
             {
                 // publish retained message on the current subscription
-                this.publishManager.PublishRetaind(topics[i], clientConnection.ClientId);
+                RetainedMessageManager.PublishRetaind(topics[i], clientConnection.ClientId);
             }
         }
 
@@ -379,22 +416,6 @@
             }
 
             return MqttMsgConnack.CONN_ACCEPTED;
-        }
-
-        /// <summary>
-        /// Return reference to a client with a specified Id is already connected
-        /// </summary>
-        /// <param name="clientId">Client Id to verify</param>
-        /// <returns>Reference to client</returns>
-        private MqttClientConnection GetClient(string clientId)
-        {
-            MqttClientConnection connectedClient;
-            if (allConnectedClients.TryGetValue(clientId, out connectedClient))
-            {
-                return connectedClient;
-            }
-
-            return null;
         }
 
         #endregion

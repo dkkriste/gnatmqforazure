@@ -24,12 +24,12 @@
 
         public MqttRawMessage GetRawMessageWithData(MqttClientConnection clientConnection, byte messageType, byte[] buffer, int bufferOffset, int payloadLength)
         {
-            MqttRawMessage rawMessage;
-            if (!rawMessageBuffer.TryPop(out rawMessage))
-            {
-                rawMessage = new MqttRawMessage(individualMessageBufferSize);
-            }
-
+            //MqttRawMessage rawMessage;
+            //if (!rawMessageBuffer.TryPop(out rawMessage))
+            //{
+            //    rawMessage = new MqttRawMessage(individualMessageBufferSize);
+            //}
+            var rawMessage = new MqttRawMessage(payloadLength);
             rawMessage.ClientConnection = clientConnection;
             rawMessage.MessageType = messageType;
             rawMessage.PayloadLength = payloadLength;

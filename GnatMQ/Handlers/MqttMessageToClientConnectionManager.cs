@@ -37,12 +37,12 @@
                     break;
 
                 case MqttMsgBase.MQTT_MSG_SUBSCRIBE_TYPE:
-                    MqttMsgSubscribe subscribe = MqttMsgSubscribe.Parse(rawMessage.MessageType, protocolVersion, rawMessage.PayloadBuffer);
+                    MqttMsgSubscribe subscribe = MqttMsgSubscribe.Parse(rawMessage.MessageType, protocolVersion, rawMessage.PayloadBuffer, rawMessage.PayloadLength);
                     rawMessage.ClientConnection.EnqueueInternalEvent(new MsgInternalEvent(subscribe));
                     break;
 
                 case MqttMsgBase.MQTT_MSG_PUBLISH_TYPE:
-                    MqttMsgPublish publish = MqttMsgPublish.Parse(rawMessage.MessageType, protocolVersion, rawMessage.PayloadBuffer);
+                    MqttMsgPublish publish = MqttMsgPublish.Parse(rawMessage.MessageType, protocolVersion, rawMessage.PayloadBuffer, rawMessage.PayloadLength);
                     EnqueueInflight(rawMessage.ClientConnection, publish, MqttMsgFlow.ToAcknowledge);
                     break;
 
@@ -71,7 +71,7 @@
                     break;
 
                 case MqttMsgBase.MQTT_MSG_UNSUBSCRIBE_TYPE:
-                    MqttMsgUnsubscribe unsubscribe = MqttMsgUnsubscribe.Parse(rawMessage.MessageType, protocolVersion, rawMessage.PayloadBuffer);
+                    MqttMsgUnsubscribe unsubscribe = MqttMsgUnsubscribe.Parse(rawMessage.MessageType, protocolVersion, rawMessage.PayloadBuffer, rawMessage.PayloadLength);
                     rawMessage.ClientConnection.EnqueueInternalEvent(new MsgInternalEvent(unsubscribe));
                     break;
 

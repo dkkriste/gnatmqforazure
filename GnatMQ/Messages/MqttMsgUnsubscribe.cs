@@ -67,7 +67,7 @@ namespace GnatMQForAzure.Messages
             this.qosLevel = QOS_LEVEL_AT_LEAST_ONCE;
         }
 
-        public static MqttMsgUnsubscribe Parse(byte fixedHeaderFirstByte, byte protocolVersion, byte[] buffer)
+        public static MqttMsgUnsubscribe Parse(byte fixedHeaderFirstByte, byte protocolVersion, byte[] buffer, int messageLength)
         {
             int index = 0;
             byte[] topicUtf8;
@@ -111,7 +111,7 @@ namespace GnatMQForAzure.Messages
                 index += topicUtf8Length;
                 tmpTopics.Add(new string(Encoding.UTF8.GetChars(topicUtf8)));
             }
-            while (index < buffer.Length);
+            while (index < messageLength);
 
             // copy from list to array
             msg.topics = new string[tmpTopics.Count];

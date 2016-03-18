@@ -190,7 +190,7 @@ namespace GnatMQForAzure.Messages
             return buffer;
         }
 
-        public static MqttMsgPublish Parse(byte fixedHeaderFirstByte, byte protocolVersion, byte[] buffer)
+        public static MqttMsgPublish Parse(byte fixedHeaderFirstByte, byte protocolVersion, byte[] buffer, int messageLength)
         {
             int index = 0;
             byte[] topicUtf8;
@@ -198,10 +198,10 @@ namespace GnatMQForAzure.Messages
             MqttMsgPublish msg = new MqttMsgPublish();
 
             // get remaining length and allocate buffer
-            int remainingLength = buffer.Length; 
+            int remainingLength = messageLength; 
 
             // read bytes from socket...
-            int received = buffer.Length;
+            int received = messageLength;
 
             // topic name
             topicUtf8Length = ((buffer[index++] << 8) & 0xFF00);
