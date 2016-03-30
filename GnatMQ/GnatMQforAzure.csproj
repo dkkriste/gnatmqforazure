@@ -47,6 +47,8 @@
     <Compile Include="Contracts\IMqttClientConnectionStarter.cs" />
     <Compile Include="Contracts\IPeriodicallyLoggable.cs" />
     <Compile Include="Entities\BufferManager.cs" />
+    <Compile Include="Entities\Delegates\MqttPublishAuthenticationDelegate.cs" />
+    <Compile Include="Entities\Delegates\MqttSubscribeAuthenticationDelegate.cs" />
     <Compile Include="Entities\MqttOptions.cs" />
     <Compile Include="Entities\MqttRawMessage.cs" />
     <Compile Include="Entities\SendSocketArgs.cs" />

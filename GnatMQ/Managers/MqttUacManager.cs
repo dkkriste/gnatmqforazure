@@ -24,17 +24,14 @@ namespace GnatMQForAzure.Managers
     /// </summary>
     public class MqttUacManager
     {
-        // user authentication delegate
-        private MqttUserAuthenticationDelegate userAuth;
-
         /// <summary>
         /// User authentication method
         /// </summary>
-        public MqttUserAuthenticationDelegate UserAuth
-        {
-            get { return this.userAuth; }
-            set { this.userAuth = value; }
-        }
+        public MqttUserAuthenticationDelegate UserAuth { get; set; }
+
+        public MqttSubscribeAuthenticationDelegate SubscribeAuthentication { get; set; }
+
+        public MqttPublishAuthenticationDelegate PublishAuthentication { get; set; }
 
         /// <summary>
         /// Execute user authentication
@@ -42,15 +39,39 @@ namespace GnatMQForAzure.Managers
         /// <param name="username">Username</param>
         /// <param name="password">Password</param>
         /// <returns>Access granted or not</returns>
-        public bool UserAuthentication(string username, string password)
+        public bool AuthenticateUser(string username, string password)
         {
-            if (this.userAuth == null)
+            if (this.UserAuth == null)
             {
                 return true;
             }
             else
             {
-                return this.userAuth(username, password);
+                return this.UserAuth(username, password);
+            }
+        }
+
+        public bool AuthenticateSubscriber(MqttClientConnection clientConnection, string topic)
+        {
+            if (SubscribeAuthentication == null)
+            {
+                return true;
+            }
+            else
+            {
+                return SubscribeAuthentication(clientConnection, topic);
+            }
+        }
+
+        public bool AuthenticatePublish(MqttClientConnection clientConnection, string topic)
+        {
+            if (PublishAuthentication == null)
+            {
+                return true;
+            }
+            else
+            {
+                return PublishAuthentication(clientConnection, topic);
             }
         }
     }

@@ -18,15 +18,11 @@ Contributors:
 namespace GnatMQForAzure
 {
     using System.Collections.Concurrent;
-    using System.Net;
-    using System.Net.Security;
-    using System.Security.Cryptography.X509Certificates;
 
     using GnatMQForAzure.Communication;
     using GnatMQForAzure.Contracts;
     using GnatMQForAzure.Entities;
     using GnatMQForAzure.Entities.Delegates;
-    using GnatMQForAzure.Entities.Enums;
     using GnatMQForAzure.Managers;
 
     /// <summary>
@@ -97,6 +93,18 @@ namespace GnatMQForAzure
         {
             get { return this.uacManager.UserAuth; }
             set { this.uacManager.UserAuth = value; }
+        }
+
+        public MqttSubscribeAuthenticationDelegate SubscribeAuthentication
+        {
+            get { return uacManager.SubscribeAuthentication; }
+            set { uacManager.SubscribeAuthentication = value; }
+        }
+
+        public MqttPublishAuthenticationDelegate PublishAuthentication
+        {
+            get { return uacManager.PublishAuthentication; }
+            set { uacManager.PublishAuthentication = value; }
         }
 
         /// <summary>

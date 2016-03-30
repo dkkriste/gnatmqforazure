@@ -349,33 +349,44 @@
 
         public void OnMqttMsgPublishReceived(MqttClientConnection clientConnection, MqttMsgPublish msg)
         {
-            // create PUBLISH message to publish
-            // [v3.1.1] DUP flag from an incoming PUBLISH message is not propagated to subscribers
-            //          It should be set in the outgoing PUBLISH message based on transmission for each subscriber
-            MqttMsgPublish publish = new MqttMsgPublish(msg.Topic, msg.Message, false, msg.QosLevel, msg.Retain);
+            if (uacManager.AuthenticatePublish(clientConnection, msg.Topic))
+            {
+                // create PUBLISH message to publish
+                // [v3.1.1] DUP flag from an incoming PUBLISH message is not propagated to subscribers
+                //          It should be set in the outgoing PUBLISH message based on transmission for each subscriber
+                MqttMsgPublish publish = new MqttMsgPublish(msg.Topic, msg.Message, false, msg.QosLevel, msg.Retain);
 
-            // publish message through publisher manager
-            this.publishManager.Publish(publish);
+                // publish message through publisher manager
+                this.publishManager.Publish(publish);
+            }
         }
 
         public void OnMqttMsgSubscribeReceived(MqttClientConnection clientConnection, ushort messageId, string[] topics, byte[] qosLevels)
         {
-            for (int i = 0; i < topics.Length; i++)
+            var wasSubscribed = false;
+            for (var i = 0; i < topics.Length; i++)
             {
-                // TODO : business logic to grant QoS levels based on some conditions ?
-                //        now the broker granted the QoS levels requested by client
+                if (uacManager.AuthenticateSubscriber(clientConnection, topics[i]))
+                {
+                    // TODO : business logic to grant QoS levels based on some conditions ?
+                    // now the broker granted the QoS levels requested by client
 
-                // subscribe client for each topic and QoS level requested
-                MqttSubscriberManager.Subscribe(topics[i], qosLevels[i], clientConnection);
+                    // subscribe client for each topic and QoS level requested
+                    MqttSubscriberManager.Subscribe(topics[i], qosLevels[i], clientConnection);
+                    wasSubscribed = true;
+                }
             }
 
-            // send SUBACK message to the client
-            MqttOutgoingMessageManager.Suback(clientConnection, messageId, qosLevels);
-
-            for (int i = 0; i < topics.Length; i++)
+            if (wasSubscribed)
             {
-                // publish retained message on the current subscription
-                RetainedMessageManager.PublishRetaind(topics[i], clientConnection);
+                // send SUBACK message to the client
+                MqttOutgoingMessageManager.Suback(clientConnection, messageId, qosLevels);
+
+                foreach (var topic in topics)
+                {
+                    // publish retained message on the current subscription
+                    RetainedMessageManager.PublishRetaind(topic, clientConnection);
+                }
             }
         }
 
@@ -409,7 +420,7 @@
             }
 
             // check user authentication
-            if (!this.uacManager.UserAuthentication(connect.Username, connect.Password))
+            if (!this.uacManager.AuthenticateUser(connect.Username, connect.Password))
             {
                 return MqttMsgConnack.CONN_REFUSED_USERNAME_PASSWORD;
             }
