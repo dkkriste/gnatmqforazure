@@ -45,6 +45,8 @@ namespace GnatMQForAzure
         // internal queue for dispatching events
         public readonly ConcurrentQueue<InternalEvent> EventQueue;
 
+        public readonly ConcurrentDictionary<string, MqttSubscription> Subscriptions;
+
         public readonly SocketAsyncEventArgs ReceiveSocketAsyncEventArgs;
 
         public readonly int ReceiveSocketOffset;
@@ -81,6 +83,8 @@ namespace GnatMQForAzure
             // queue for received message
             EventQueue = new ConcurrentQueue<InternalEvent>();
             InternalQueue = new ConcurrentQueue<MqttMsgBase>();
+
+            Subscriptions = new ConcurrentDictionary<string, MqttSubscription>();
 
             // client not connected yet (CONNACK not send from client), some default values
             IsConnected = false;

@@ -42,18 +42,17 @@ namespace GnatMQForAzure.Managers
         #endregion
 
         // MQTT subscription comparer
-        private static readonly MqttSubscriptionComparer comparer;
+        private static readonly MqttSubscriptionComparer Comparer;
 
-        // subscribers list for each topic
-        private static readonly ConcurrentDictionary<string, List<MqttSubscription>> subscribers;
+        private static readonly ConcurrentDictionary<string, List<MqttSubscription>> NonWildcardSubscriptions;
 
-        /// <summary>
-        /// Constructor
-        /// </summary>
+        private static readonly ConcurrentDictionary<string, List<MqttSubscription>> WildcardSubscriptions; 
+
         static MqttSubscriberManager()
         {
-            subscribers = new ConcurrentDictionary<string, List<MqttSubscription>>();
-            comparer = new MqttSubscriptionComparer(MqttSubscriptionComparer.MqttSubscriptionComparerType.OnClientId);
+            NonWildcardSubscriptions = new ConcurrentDictionary<string, List<MqttSubscription>>();
+            WildcardSubscriptions = new ConcurrentDictionary<string, List<MqttSubscription>>();
+            Comparer = new MqttSubscriptionComparer(MqttSubscriptionComparer.MqttSubscriptionComparerType.OnClientId);
         }
 
         /// <summary>
@@ -64,9 +63,84 @@ namespace GnatMQForAzure.Managers
         /// <param name="clientConnection">Client to subscribe</param>
         public static void Subscribe(string topic, byte qosLevel, MqttClientConnection clientConnection)
         {
+            if (IsWildcardSubscription(topic))
+            {
+                SubscribeWithWildcard(topic, qosLevel, clientConnection);
+            }
+            else
+            {
+                SubscribeWithoutWildcard(topic, qosLevel, clientConnection);
+            }
+        }
+
+        /// <summary>
+        /// Remove a subscriber for a topic
+        /// </summary>
+        /// <param name="topic">Topic for unsubscription</param>
+        /// <param name="clientConnection">Client to unsubscribe</param>
+        public static void Unsubscribe(string topic, MqttClientConnection clientConnection)
+        {
+            if (IsWildcardSubscription(topic))
+            {
+                UnsubscribeWithWildcard(topic, clientConnection);
+            }
+            else
+            {
+                UnsubscribeWithoutWildcard(topic, clientConnection);
+            }
+        }
+
+        public static MqttSubscription GetSubscription(string topic, MqttClientConnection clientConnection)
+        {
+            MqttSubscription subscription;
+            if (IsWildcardSubscription(topic))
+            {
+                var topicReplaced = topic.Replace(PLUS_WILDCARD, PLUS_WILDCARD_REPLACE).Replace(SHARP_WILDCARD, SHARP_WILDCARD_REPLACE);
+                clientConnection.Subscriptions.TryGetValue(topicReplaced, out subscription);
+            }
+            else
+            {
+                clientConnection.Subscriptions.TryGetValue(topic, out subscription);
+            }
+
+            return subscription;
+        }
+
+        /// <summary>
+        /// Get subscription list for a specified topic
+        /// </summary>
+        /// <param name="topic">Topic to get subscription list</param>
+        /// <returns>Subscription list</returns>
+        public static List<MqttSubscription> GetSubscriptionsByTopic(string topic)
+        {
+            List<MqttSubscription> allSubscriptionsMatchingTopic = new List<MqttSubscription>();
+            List<MqttSubscription> nonWildcardSubscriptionsWithTopic;
+            if (NonWildcardSubscriptions.TryGetValue(topic, out nonWildcardSubscriptionsWithTopic))
+            {
+                allSubscriptionsMatchingTopic.AddRange(nonWildcardSubscriptionsWithTopic);
+            }
+            
+            foreach (var wildcardTopic in WildcardSubscriptions.Keys)
+            {
+                List<MqttSubscription> subscriptions; 
+                if (new Regex(wildcardTopic).IsMatch(topic) && WildcardSubscriptions.TryGetValue(wildcardTopic, out subscriptions))
+                {
+                    allSubscriptionsMatchingTopic.AddRange(subscriptions);
+                }
+            }
+
+            // use comparer for multiple subscriptions that overlap (e.g. /test/# and  /test/+/foo)
+            // If a client is subscribed to multiple subscriptions with topics that overlap
+            // it has more entries into subscriptions list but broker sends only one message
+            Comparer.Type = MqttSubscriptionComparer.MqttSubscriptionComparerType.OnClientId;
+            return allSubscriptionsMatchingTopic.Distinct(Comparer).ToList();
+        }
+
+        private static void SubscribeWithWildcard(string topic, byte qosLevel, MqttClientConnection clientConnection)
+        {
             string topicReplaced = topic.Replace(PLUS_WILDCARD, PLUS_WILDCARD_REPLACE).Replace(SHARP_WILDCARD, SHARP_WILDCARD_REPLACE);
 
-            var subscriptionsForTopic = subscribers.GetOrAdd(topicReplaced, new List<MqttSubscription>());
+            var subscriptionsForTopic = WildcardSubscriptions.GetOrAdd(topicReplaced, new List<MqttSubscription>());
             lock (subscriptionsForTopic)
             {
                 if (!AlreadySubscribed(clientConnection.ClientId, subscriptionsForTopic))
@@ -80,21 +154,40 @@ namespace GnatMQForAzure.Managers
                     };
 
                     subscriptionsForTopic.Add(subscription);
+
+                    clientConnection.Subscriptions.TryAdd(topicReplaced, subscription);
                 }
             }
         }
 
-        /// <summary>
-        /// Remove a subscriber for a topic
-        /// </summary>
-        /// <param name="topic">Topic for unsubscription</param>
-        /// <param name="clientConnection">Client to unsubscribe</param>
-        public static void Unsubscribe(string topic, MqttClientConnection clientConnection)
+        private static void SubscribeWithoutWildcard(string topic, byte qosLevel, MqttClientConnection clientConnection)
+        {
+            var subscriptionsForTopic = NonWildcardSubscriptions.GetOrAdd(topic, new List<MqttSubscription>());
+            lock (subscriptionsForTopic)
+            {
+                if (!AlreadySubscribed(clientConnection.ClientId, subscriptionsForTopic))
+                {
+                    MqttSubscription subscription = new MqttSubscription()
+                    {
+                        ClientId = clientConnection.ClientId,
+                        Topic = topic,
+                        QosLevel = qosLevel,
+                        ClientConnection = clientConnection
+                    };
+
+                    subscriptionsForTopic.Add(subscription);
+
+                    clientConnection.Subscriptions.TryAdd(topic, subscription);
+                }
+            }
+        }
+
+        private static void UnsubscribeWithWildcard(string topic, MqttClientConnection clientConnection)
         {
             string topicReplaced = topic.Replace(PLUS_WILDCARD, PLUS_WILDCARD_REPLACE).Replace(SHARP_WILDCARD, SHARP_WILDCARD_REPLACE);
 
             List<MqttSubscription> subscriptionsForTopic;
-            if (subscribers.TryGetValue(topicReplaced, out subscriptionsForTopic))
+            if (WildcardSubscriptions.TryGetValue(topicReplaced, out subscriptionsForTopic))
             {
                 lock (subscriptionsForTopic)
                 {
@@ -109,99 +202,34 @@ namespace GnatMQForAzure.Managers
                         }
                     }
                 }
+
+                MqttSubscription subscriptionToBeRemoved;
+                clientConnection.Subscriptions.TryRemove(topicReplaced, out subscriptionToBeRemoved);
             }
         }
 
-        /// <summary>
-        /// Remove a subscriber for all topics
-        /// </summary>
-        /// <param name="clientConnection">Client to unsubscribe</param>
-        public static void Unsubscribe(MqttClientConnection clientConnection)
+        private static void UnsubscribeWithoutWildcard(string topic, MqttClientConnection clientConnection)
         {
-            subscribers.Keys.AsParallel().ForAll(c => Unsubscribe(c, clientConnection));
-        }
+            List<MqttSubscription> subscriptionsForTopic;
+            if (NonWildcardSubscriptions.TryGetValue(topic, out subscriptionsForTopic))
+            {
+                lock (subscriptionsForTopic)
+                {
+                    foreach (var subscription in subscriptionsForTopic)
+                    {
+                        if (subscription.ClientId == clientConnection.ClientId)
+                        {
+                            subscriptionsForTopic.Remove(subscription);
+                            subscription.Dispose();
+                            // TODO deal with topic with no subscribers
+                            return;
+                        }
+                    }
+                }
 
-        /// <summary>
-        /// Get subscription list for a specified topic and QoS Level
-        /// </summary>
-        /// <param name="topic">Topic to get subscription list</param>
-        /// <param name="qosLevel">QoS level requested</param>
-        /// <returns>Subscription list</returns>
-        public static List<MqttSubscription> GetSubscriptions(string topic, byte qosLevel)
-        {
-            var query = from ss in subscribers
-                        where (new Regex(ss.Key)).IsMatch(topic)    // check for topics based also on wildcard with regex
-                        from s in subscribers[ss.Key]
-                        where s.QosLevel == qosLevel                // check for subscriber only with a specified QoS level granted
-                        select s;
-
-            // use comparer for multiple subscriptions that overlap (e.g. /test/# and  /test/+/foo)
-            // If a client is subscribed to multiple subscriptions with topics that overlap
-            // it has more entries into subscriptions list but broker sends only one message
-            comparer.Type = MqttSubscriptionComparer.MqttSubscriptionComparerType.OnClientId;
-            return query.Distinct(comparer).ToList();
-        }
-
-        /// <summary>
-        /// Get a subscription for a specified topic and client
-        /// </summary>
-        /// <param name="topic">Topic to get subscription</param>
-        /// <param name="clientId">Client Id to get subscription</param>
-        /// <returns>Subscription list</returns>
-        public static MqttSubscription GetSubscription(string topic, string clientId)
-        {
-            var query = from ss in subscribers
-                        where (new Regex(ss.Key)).IsMatch(topic)    // check for topics based also on wildcard with regex
-                        from s in subscribers[ss.Key]
-                        where s.ClientId == clientId                // check for subscriber only with a specified Client Id
-                        select s;
-
-            // use comparer for multiple subscriptions that overlap (e.g. /test/# and  /test/+/foo)
-            // If a client is subscribed to multiple subscriptions with topics that overlap
-            // it has more entries into subscriptions list but broker sends only one message
-            comparer.Type = MqttSubscriptionComparer.MqttSubscriptionComparerType.OnClientId;
-            return query.Distinct(comparer).FirstOrDefault();
-        }
-
-        /// <summary>
-        /// Get subscription list for a specified topic
-        /// </summary>
-        /// <param name="topic">Topic to get subscription list</param>
-        /// <returns>Subscription list</returns>
-        public static List<MqttSubscription> GetSubscriptionsByTopic(string topic)
-        {
-            var query = from ss in subscribers
-                        where (new Regex(ss.Key)).IsMatch(topic)    // check for topics based also on wildcard with regex
-                        from s in subscribers[ss.Key]
-                        select s;
-
-            // use comparer for multiple subscriptions that overlap (e.g. /test/# and  /test/+/foo)
-            // If a client is subscribed to multiple subscriptions with topics that overlap
-            // it has more entries into subscriptions list but broker sends only one message
-            comparer.Type = MqttSubscriptionComparer.MqttSubscriptionComparerType.OnClientId;
-            return query.Distinct(comparer).ToList();
-        }
-
-        /// <summary>
-        /// Get subscription list for a specified client
-        /// </summary>
-        /// <param name="clientId">Client Id to get subscription list</param>
-        /// <returns>Subscription lis</returns>
-        public static List<MqttSubscription> GetSubscriptionsByClient(string clientId)
-        {
-            var query = from ss in subscribers
-                        from s in subscribers[ss.Key]
-                        where s.ClientId == clientId
-                        select s;
-
-            // use comparer for multiple subscriptions that overlap (e.g. /test/# and  /test/+/foo)
-            // If a client is subscribed to multiple subscriptions with topics that overlap
-            // it has more entries into subscriptions list but broker sends only one message
-            //this.comparer.Type = MqttSubscriptionComparer.MqttSubscriptionComparerType.OnTopic;
-            //return query.Distinct(comparer).ToList();
-
-            // I need all subscriptions, also overlapped (used to save session)
-            return query.ToList();
+                MqttSubscription subscriptionToBeRemoved;
+                clientConnection.Subscriptions.TryRemove(topic, out subscriptionToBeRemoved);
+            }
         }
 
         private static bool AlreadySubscribed(string clientId, List<MqttSubscription> currentSubscriptions)
@@ -215,6 +243,11 @@ namespace GnatMQForAzure.Managers
             }
 
             return false;
+        }
+
+        private static bool IsWildcardSubscription(string topic)
+        {
+            return topic.Contains(PLUS_WILDCARD) || topic.Contains(SHARP_WILDCARD);
         }
     }
 }

@@ -70,9 +70,9 @@
         /// </summary>
         /// <param name="topic">Topic to search for a retained message</param>
         /// <param name="clientId">Client Id to send retained message</param>
-        public static void PublishRetaind(string topic, string clientId)
+        public static void PublishRetaind(string topic, MqttClientConnection clientConnection)
         {
-            MqttSubscription subscription = MqttSubscriberManager.GetSubscription(topic, clientId);
+            MqttSubscription subscription = MqttSubscriberManager.GetSubscription(topic, clientConnection);
 
             // add subscription to list of subscribers for receiving retained messages
             if (subscription != null)

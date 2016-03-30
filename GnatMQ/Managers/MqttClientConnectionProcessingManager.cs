@@ -3,6 +3,7 @@
     using System;
     using System.Collections.Concurrent;
     using System.Collections.Generic;
+    using System.Linq;
     using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
@@ -277,7 +278,7 @@
                                     clientConnection);
 
                                 // publish retained message on the current subscription
-                                RetainedMessageManager.PublishRetaind(subscription.Topic, clientId);
+                                RetainedMessageManager.PublishRetaind(subscription.Topic, clientConnection);
                             }
                         }
 
@@ -324,9 +325,9 @@
                 // if not clean session
                 if (!clientConnection.CleanSession)
                 {
-                    List<MqttSubscription> subscriptions = MqttSubscriberManager.GetSubscriptionsByClient(clientConnection.ClientId);
+                    List<MqttSubscription> subscriptions = clientConnection.Subscriptions.Values.ToList();
 
-                    if ((subscriptions != null) && (subscriptions.Count > 0))
+                    if (subscriptions.Count > 0)
                     {
                         MqttSessionManager.SaveSession(clientConnection.ClientId, clientConnection.Session, subscriptions);
 
@@ -334,8 +335,11 @@
                     }
                 }
 
-                // delete client from runtime subscription
-                MqttSubscriberManager.Unsubscribe(clientConnection);
+                foreach (var topic in clientConnection.Subscriptions.Keys)
+                {
+                    // delete client from runtime subscription
+                    MqttSubscriberManager.Unsubscribe(topic, clientConnection);
+                }
 
                 // close the client
                 CloseClientConnection(clientConnection);
@@ -371,7 +375,7 @@
             for (int i = 0; i < topics.Length; i++)
             {
                 // publish retained message on the current subscription
-                RetainedMessageManager.PublishRetaind(topics[i], clientConnection.ClientId);
+                RetainedMessageManager.PublishRetaind(topics[i], clientConnection);
             }
         }
 
