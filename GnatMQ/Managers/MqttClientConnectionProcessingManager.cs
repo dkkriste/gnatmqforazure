@@ -82,7 +82,6 @@
 
         public void PeriodicLogging()
         {
-            logger.LogMetric(this, LoggerConstants.NumberOfConnectedClients, numberOfConnectedClients);
             logger.LogMetric(this, LoggerConstants.RawMessageQueueSize, rawMessageQueue.Count);
             logger.LogMetric(this, LoggerConstants.InflightQueuesToProcessSize, clientConnectionsWithInflightQueuesToProcess.Count);
             logger.LogMetric(this, LoggerConstants.EventQueuesToProcessSize, clientConnectionsWithInternalEventQueuesToProcess.Count);

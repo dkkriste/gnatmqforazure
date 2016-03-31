@@ -19,6 +19,7 @@ namespace GnatMQForAzure.Session
 {
     using System.Collections.Generic;
 
+    using GnatMQForAzure.Entities;
     using GnatMQForAzure.Managers;
     using GnatMQForAzure.Messages;
 

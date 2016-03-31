@@ -5,6 +5,7 @@
     using System.Linq;
     using System.Text.RegularExpressions;
 
+    using GnatMQForAzure.Entities;
     using GnatMQForAzure.Handlers;
     using GnatMQForAzure.Messages;
     using GnatMQForAzure.Utility;

@@ -376,7 +376,9 @@ namespace GnatMQForAzure
             else
             {
                 if (this.Session != null)
+                {
                     this.Session.Clear();
+                }
             }
         }
     }

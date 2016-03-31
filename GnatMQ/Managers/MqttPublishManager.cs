@@ -25,6 +25,7 @@ namespace GnatMQForAzure.Managers
     using System.Threading;
 
     using GnatMQForAzure.Contracts;
+    using GnatMQForAzure.Entities;
     using GnatMQForAzure.Handlers;
     using GnatMQForAzure.Messages;
     using GnatMQForAzure.Session;

@@ -78,7 +78,7 @@
     <Compile Include="Managers\MqttOutgoingMessageManager.cs" />
     <Compile Include="Managers\MqttProcessingLoadbalancer.cs" />
     <Compile Include="Managers\MqttRawMessageManager.cs" />
-    <Compile Include="Managers\MqttSubscription.cs" />
+    <Compile Include="Entities\MqttSubscription.cs" />
     <Compile Include="Managers\RetainedMessageManager.cs" />
     <Compile Include="Utility\LoggerConstants.cs" />
     <Compile Include="Utility\MqttSubscriptionComparer.cs" />

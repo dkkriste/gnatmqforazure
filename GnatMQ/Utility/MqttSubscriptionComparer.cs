@@ -3,6 +3,7 @@ namespace GnatMQForAzure.Utility
     using System.Collections.Generic;
     using System.Text.RegularExpressions;
 
+    using GnatMQForAzure.Entities;
     using GnatMQForAzure.Managers;
 
     /// <summary>

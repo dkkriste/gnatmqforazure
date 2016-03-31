@@ -2,9 +2,13 @@
 {
     public class LoggerConstants
     {
-        #region MqttClientConnectionProcessingManager
+        #region MqttBroker
 
         public const string NumberOfConnectedClients = "NumberOfConnectedClients";
+
+        #endregion
+
+        #region MqttClientConnectionProcessingManager
 
         public const string RawMessageQueueSize = "RawMessageQueueSize";
 

@@ -24,6 +24,7 @@ namespace GnatMQForAzure
     using GnatMQForAzure.Entities;
     using GnatMQForAzure.Entities.Delegates;
     using GnatMQForAzure.Managers;
+    using GnatMQForAzure.Utility;
 
     /// <summary>
     /// MQTT broker business logic
@@ -50,20 +51,9 @@ namespace GnatMQForAzure
 
         private IMqttClientConnectionManager connectionManager;
 
-        // MQTT broker settings
-        private MqttSettings settings;
-
         public MqttBroker(ILogger logger, MqttOptions options)
-            : this(logger, options, MqttSettings.Instance)
-        {
-        }
-
-        public MqttBroker(ILogger logger, MqttOptions options, MqttSettings settings)
         {
             this.logger = logger;
-
-            // MQTT broker settings
-            this.settings = settings;
 
             // create managers 
             this.uacManager = new MqttUacManager();
@@ -161,16 +151,12 @@ namespace GnatMQForAzure
             {
                 processingManager.Stop();
             }
-
-            // TODO close connection with all clients
-            //foreach (MqttClientConnection client in this.allConnectedClients)
-            //{
-            //    client.Close();
-            //}
         }
 
         public void PeriodicLogging()
         {
+            logger.LogMetric(this, LoggerConstants.NumberOfConnectedClients, AllConnectedClients.Count);
+
             processingLoadbalancer.PeriodicLogging();
 
             foreach (var processingManager in processingManagers)

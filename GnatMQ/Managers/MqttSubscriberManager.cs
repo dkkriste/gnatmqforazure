@@ -22,6 +22,7 @@ namespace GnatMQForAzure.Managers
     using System.Linq;
     using System.Text.RegularExpressions;
 
+    using GnatMQForAzure.Entities;
     using GnatMQForAzure.Utility;
 
     /// <summary>
@@ -82,11 +83,11 @@ namespace GnatMQForAzure.Managers
         {
             if (IsWildcardSubscription(topic))
             {
-                UnsubscribeWithWildcard(topic, clientConnection);
+                UnsubscribeFromTopicWithWildcard(topic, clientConnection);
             }
             else
             {
-                UnsubscribeWithoutWildcard(topic, clientConnection);
+                UnsubscribeFromTopicWithoutWildcard(topic, clientConnection);
             }
         }
 
@@ -182,7 +183,7 @@ namespace GnatMQForAzure.Managers
             }
         }
 
-        private static void UnsubscribeWithWildcard(string topic, MqttClientConnection clientConnection)
+        private static void UnsubscribeFromTopicWithWildcard(string topic, MqttClientConnection clientConnection)
         {
             string topicReplaced = topic.Replace(PLUS_WILDCARD, PLUS_WILDCARD_REPLACE).Replace(SHARP_WILDCARD, SHARP_WILDCARD_REPLACE);
 
@@ -196,19 +197,18 @@ namespace GnatMQForAzure.Managers
                         if (subscription.ClientId == clientConnection.ClientId)
                         {
                             subscriptionsForTopic.Remove(subscription);
-                            subscription.Dispose();
                             // TODO deal with topic with no subscribers
+
+                            MqttSubscription subscriptionToBeRemoved;
+                            clientConnection.Subscriptions.TryRemove(topicReplaced, out subscriptionToBeRemoved);
                             return;
                         }
                     }
                 }
-
-                MqttSubscription subscriptionToBeRemoved;
-                clientConnection.Subscriptions.TryRemove(topicReplaced, out subscriptionToBeRemoved);
             }
         }
 
-        private static void UnsubscribeWithoutWildcard(string topic, MqttClientConnection clientConnection)
+        private static void UnsubscribeFromTopicWithoutWildcard(string topic, MqttClientConnection clientConnection)
         {
             List<MqttSubscription> subscriptionsForTopic;
             if (NonWildcardSubscriptions.TryGetValue(topic, out subscriptionsForTopic))
@@ -220,15 +220,14 @@ namespace GnatMQForAzure.Managers
                         if (subscription.ClientId == clientConnection.ClientId)
                         {
                             subscriptionsForTopic.Remove(subscription);
-                            subscription.Dispose();
                             // TODO deal with topic with no subscribers
+
+                            MqttSubscription subscriptionToBeRemoved;
+                            clientConnection.Subscriptions.TryRemove(topic, out subscriptionToBeRemoved);
                             return;
                         }
                     }
                 }
-
-                MqttSubscription subscriptionToBeRemoved;
-                clientConnection.Subscriptions.TryRemove(topic, out subscriptionToBeRemoved);
             }
         }
 

@@ -1,4 +1,4 @@
-namespace GnatMQForAzure.Managers
+namespace GnatMQForAzure.Entities
 {
     /// <summary>
     /// MQTT subscription
@@ -49,17 +49,6 @@ namespace GnatMQForAzure.Managers
             this.Topic = topic;
             this.QosLevel = qosLevel;
             this.ClientConnection = clientConnection;
-        }
-
-        /// <summary>
-        /// Dispose subscription
-        /// </summary>
-        public void Dispose()
-        {
-            this.ClientId = null;
-            this.Topic = null;
-            this.QosLevel = 0;
-            this.ClientConnection = null;
         }
     }
 }
