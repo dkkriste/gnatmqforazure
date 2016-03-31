@@ -94,22 +94,12 @@
                                 // check for topics based also on wildcard with regex
                                 select p.Value;
 
-                    if (query.Any())
+                    foreach (MqttMsgPublish retained in query)
                     {
-                        foreach (MqttMsgPublish retained in query)
-                        {
-                            var qosLevel = (subscription.QosLevel < retained.QosLevel)
-                                                ? subscription.QosLevel
-                                                : retained.QosLevel;
+                        var qosLevel = (subscription.QosLevel < retained.QosLevel) ? subscription.QosLevel : retained.QosLevel;
 
-                            // send PUBLISH message to the current subscriber
-                            MqttMessageToClientConnectionManager.Publish(
-                                subscription.ClientConnection,
-                                retained.Topic,
-                                retained.Message,
-                                qosLevel,
-                                retained.Retain);
-                        }
+                        // send PUBLISH message to the current subscriber
+                        MqttMessageToClientConnectionManager.Publish(subscription.ClientConnection, retained.Topic, retained.Message, qosLevel, retained.Retain);
                     }
                 }
                 catch (Exception)

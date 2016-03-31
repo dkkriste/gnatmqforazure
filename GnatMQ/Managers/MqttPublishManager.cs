@@ -132,16 +132,8 @@ namespace GnatMQForAzure.Managers
 
                         if (subscription != null)
                         {
-                            var qosLevel = (subscription.QosLevel < outgoingMsg.QosLevel)
-                                                ? subscription.QosLevel
-                                                : outgoingMsg.QosLevel;
-
-                            MqttMessageToClientConnectionManager.Publish(
-                                subscription.ClientConnection,
-                                outgoingMsg.Topic,
-                                outgoingMsg.Message,
-                                qosLevel,
-                                outgoingMsg.Retain);
+                            var qosLevel = (subscription.QosLevel < outgoingMsg.QosLevel) ? subscription.QosLevel : outgoingMsg.QosLevel;
+                            MqttMessageToClientConnectionManager.Publish(subscription.ClientConnection, outgoingMsg.Topic, outgoingMsg.Message, qosLevel,outgoingMsg.Retain);
                         }
                     }
                 }
@@ -164,20 +156,13 @@ namespace GnatMQForAzure.Managers
                         Interlocked.Increment(ref numberOfMessagesPublished);
 
                         // get all subscriptions for a topic
-                        List<MqttSubscription> subscriptions = MqttSubscriberManager.GetSubscriptionsByTopic(publish.Topic);
-
-                        byte qosLevel;
-                        if ((subscriptions != null) && (subscriptions.Count > 0))
+                        var subscriptions = MqttSubscriberManager.GetSubscriptionsByTopic(publish.Topic);
+                        foreach (var subscription in subscriptions)
                         {
-                            foreach (MqttSubscription subscription in subscriptions)
-                            {
-                                qosLevel = (subscription.QosLevel < publish.QosLevel)
-                                               ? subscription.QosLevel
-                                               : publish.QosLevel;
+                            var qosLevel = (subscription.QosLevel < publish.QosLevel) ? subscription.QosLevel : publish.QosLevel;
 
-                                // send PUBLISH message to the current subscriber
-                                MqttMessageToClientConnectionManager.Publish(subscription.ClientConnection, publish.Topic, publish.Message, qosLevel, publish.Retain);
-                            }
+                            // send PUBLISH message to the current subscriber
+                            MqttMessageToClientConnectionManager.Publish(subscription.ClientConnection, publish.Topic, publish.Message, qosLevel, publish.Retain);
                         }
                     }
                 }

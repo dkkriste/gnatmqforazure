@@ -16,10 +16,16 @@
 
         public void StartReceive(SocketAsyncEventArgs receiveEventArgs)
         {
-            bool willRaiseEvent = receiveEventArgs.AcceptSocket.ReceiveAsync(receiveEventArgs);
-            if (!willRaiseEvent)
+            try
             {
-                ProcessReceive(receiveEventArgs);
+                bool willRaiseEvent = receiveEventArgs.AcceptSocket.ReceiveAsync(receiveEventArgs);
+                if (!willRaiseEvent)
+                {
+                    ProcessReceive(receiveEventArgs);
+                }
+            }
+            catch (Exception)
+            {
             }
         }
 

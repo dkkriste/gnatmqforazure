@@ -112,7 +112,7 @@ namespace GnatMQForAzure.Managers
         /// </summary>
         /// <param name="topic">Topic to get subscription list</param>
         /// <returns>Subscription list</returns>
-        public static List<MqttSubscription> GetSubscriptionsByTopic(string topic)
+        public static IEnumerable<MqttSubscription> GetSubscriptionsByTopic(string topic)
         {
             List<MqttSubscription> allSubscriptionsMatchingTopic = new List<MqttSubscription>();
             List<MqttSubscription> nonWildcardSubscriptionsWithTopic;
@@ -134,7 +134,7 @@ namespace GnatMQForAzure.Managers
             // If a client is subscribed to multiple subscriptions with topics that overlap
             // it has more entries into subscriptions list but broker sends only one message
             Comparer.Type = MqttSubscriptionComparer.MqttSubscriptionComparerType.OnClientId;
-            return allSubscriptionsMatchingTopic.Distinct(Comparer).ToList();
+            return allSubscriptionsMatchingTopic.Distinct(Comparer);
         }
 
         private static void SubscribeWithWildcard(string topic, byte qosLevel, MqttClientConnection clientConnection)

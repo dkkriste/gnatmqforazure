@@ -26,9 +26,6 @@ namespace GnatMQForAzure
     using GnatMQForAzure.Managers;
     using GnatMQForAzure.Utility;
 
-    /// <summary>
-    /// MQTT broker business logic
-    /// </summary>
     public class MqttBroker : IPeriodicallyLoggable
     {
         // clients connected list
@@ -42,24 +39,20 @@ namespace GnatMQForAzure
 
         private readonly MqttAsyncTcpSocketListener socketListener;
 
-        // reference to User Access Control manager
         private readonly MqttUacManager uacManager;
 
-        private MqttRawMessageManager rawMessageManager;
+        private readonly MqttRawMessageManager rawMessageManager;
 
-        private MqttAsyncTcpReceiver asyncTcpReceiver;
+        private readonly MqttAsyncTcpReceiver asyncTcpReceiver;
 
-        private IMqttClientConnectionManager connectionManager;
+        private readonly IMqttClientConnectionManager connectionManager;
 
         public MqttBroker(ILogger logger, MqttOptions options)
         {
-            this.logger = logger;
-
-            // create managers 
-            this.uacManager = new MqttUacManager();
-
             MqttAsyncTcpSender.Init(options);
 
+            this.logger = logger;
+            this.uacManager = new MqttUacManager();
             this.rawMessageManager = new MqttRawMessageManager(options);
             this.asyncTcpReceiver = new MqttAsyncTcpReceiver(rawMessageManager);
             this.connectionManager = new MqttClientConnectionManager(options, asyncTcpReceiver);
@@ -76,22 +69,19 @@ namespace GnatMQForAzure
             this.socketListener = new MqttAsyncTcpSocketListener(processingLoadbalancer, connectionManager, options);
         }
 
-        /// <summary>
-        /// User authentication method
-        /// </summary>
         public MqttUserAuthenticationDelegate UserAuth
         {
             get { return this.uacManager.UserAuth; }
             set { this.uacManager.UserAuth = value; }
         }
 
-        public MqttSubscribeAuthenticationDelegate SubscribeAuthentication
+        public MqttSubscribeAuthenticationDelegate SubscribeAuth
         {
             get { return uacManager.SubscribeAuthentication; }
             set { uacManager.SubscribeAuthentication = value; }
         }
 
-        public MqttPublishAuthenticationDelegate PublishAuthentication
+        public MqttPublishAuthenticationDelegate PublishAuth
         {
             get { return uacManager.PublishAuthentication; }
             set { uacManager.PublishAuthentication = value; }
@@ -123,9 +113,6 @@ namespace GnatMQForAzure
             return AllConnectedClients.TryRemove(clientId, out clientConnection);
         }
 
-        /// <summary>
-        /// Start broker
-        /// </summary>
         public void Start()
         {
             socketListener.Start();
@@ -138,9 +125,6 @@ namespace GnatMQForAzure
             }
         }
 
-        /// <summary>
-        /// Stop broker
-        /// </summary>
         public void Stop()
         {
             socketListener.Stop();
