@@ -152,10 +152,10 @@ namespace GnatMQForAzure
             processingLoadbalancer.PeriodicLogging();
             connectionManager.PeriodicLogging();
 
-            //foreach (var processingManager in processingManagers)
-            //{
-            //    processingManager.PeriodicLogging();
-            //}
+            foreach (var processingManager in processingManagers)
+            {
+                processingManager.PeriodicLogging();
+            }
         }
     }
 }
