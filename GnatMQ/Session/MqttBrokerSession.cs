@@ -17,10 +17,10 @@ Contributors:
 
 namespace GnatMQForAzure.Session
 {
+    using System.Collections.Concurrent;
     using System.Collections.Generic;
 
     using GnatMQForAzure.Entities;
-    using GnatMQForAzure.Managers;
     using GnatMQForAzure.Messages;
 
     /// <summary>
@@ -29,21 +29,6 @@ namespace GnatMQForAzure.Session
     public class MqttBrokerSession : MqttSession
     {
         /// <summary>
-        /// Client related to the subscription
-        /// </summary>
-        public MqttClientConnection ClientConnection { get; set; }
-
-        /// <summary>
-        /// Subscriptions for the client session
-        /// </summary>
-        public List<MqttSubscription> Subscriptions;
-
-        /// <summary>
-        /// Outgoing messages to publish
-        /// </summary>
-        public Queue<MqttMsgPublish> OutgoingMessages;
-
-        /// <summary>
         /// Constructor
         /// </summary>
         public MqttBrokerSession()
@@ -51,15 +36,30 @@ namespace GnatMQForAzure.Session
         {
             this.ClientConnection = null;
             this.Subscriptions = new List<MqttSubscription>();
-            this.OutgoingMessages = new Queue<MqttMsgPublish>();
+            this.OutgoingMessages = new ConcurrentQueue<MqttMsgPublish>();
         }
+
+        /// <summary>
+        /// Client related to the subscription
+        /// </summary>
+        public MqttClientConnection ClientConnection { get; set; }
+
+        /// <summary>
+        /// Subscriptions for the client session
+        /// </summary>
+        public List<MqttSubscription> Subscriptions { get; set; }
+
+        /// <summary>
+        /// Outgoing messages to publish
+        /// </summary>
+        public ConcurrentQueue<MqttMsgPublish> OutgoingMessages { get; set; }
 
         public override void Clear()
         {
             base.Clear();
             this.ClientConnection = null;
             this.Subscriptions.Clear();
-            this.OutgoingMessages.Clear();
+            this.OutgoingMessages = new ConcurrentQueue<MqttMsgPublish>();
         }
     }
 }

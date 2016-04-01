@@ -50,9 +50,6 @@ namespace GnatMQForAzure.Messages
         /// <summary>
         /// Unique key
         /// </summary>
-        public string Key 
-        {
-            get { return this.Flow + "_" + this.Message.MessageId; }
-        }
+        public string Key => this.Flow + "_" + this.Message.MessageId;
     }
 }

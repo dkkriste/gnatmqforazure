@@ -119,10 +119,9 @@ namespace GnatMQForAzure.Managers
 
                     MqttBrokerSession session = MqttSessionManager.GetSession(clientId);
 
-                    while (session.OutgoingMessages.Count > 0)
+                    MqttMsgPublish outgoingMsg;
+                    while (session.OutgoingMessages.TryDequeue(out outgoingMsg))
                     {
-                        MqttMsgPublish outgoingMsg = session.OutgoingMessages.Dequeue();
-
                         var query = from s in session.Subscriptions
                                     where (new Regex(s.Topic)).IsMatch(outgoingMsg.Topic)
                                     // check for topics based also on wildcard with regex

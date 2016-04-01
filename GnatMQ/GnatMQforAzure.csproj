@@ -75,6 +75,7 @@
     <Compile Include="Managers\MqttClientConnectionManager.cs" />
     <Compile Include="Handlers\MqttMessageToClientConnectionManager.cs" />
     <Compile Include="Managers\MqttClientConnectionTimeoutManager.cs" />
+    <Compile Include="Managers\MqttKeepAliveManager.cs" />
     <Compile Include="Managers\MqttOutgoingMessageManager.cs" />
     <Compile Include="Managers\MqttProcessingLoadbalancer.cs" />
     <Compile Include="Managers\MqttRawMessageManager.cs" />

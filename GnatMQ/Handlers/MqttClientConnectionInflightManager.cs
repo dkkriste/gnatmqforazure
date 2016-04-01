@@ -194,7 +194,8 @@
                         && clientConnection.Session != null
                         && clientConnection.Session.InflightMessages.ContainsKey(msgContext.Key))
                     {
-                        clientConnection.Session.InflightMessages.Remove(msgContext.Key);
+                        MqttMsgContext contextToBeRemoved;
+                        clientConnection.Session.InflightMessages.TryRemove(msgContext.Key, out contextToBeRemoved);
                     }
                 }
             }
@@ -238,7 +239,8 @@
                         // PUBCOMP not received, PUBREL retries failed, need to remove from session inflight messages too
                         if ((clientConnection.Session != null) && clientConnection.Session.InflightMessages.ContainsKey(msgContext.Key))
                         {
-                            clientConnection.Session.InflightMessages.Remove(msgContext.Key);
+                            MqttMsgContext contextToBeRemoved;
+                            clientConnection.Session.InflightMessages.TryRemove(msgContext.Key, out contextToBeRemoved);
                         }
 
                         // if PUBCOMP for a PUBLISH message not received after retries, raise event for not published
@@ -300,7 +302,8 @@
                     if ((msgInflight.Type == MqttMsgBase.MQTT_MSG_PUBLISH_TYPE) && (clientConnection.Session != null)
                         && (clientConnection.Session.InflightMessages.ContainsKey(msgContext.Key)))
                     {
-                        clientConnection.Session.InflightMessages.Remove(msgContext.Key);
+                        MqttMsgContext contextToBeRemoved;
+                        clientConnection.Session.InflightMessages.TryRemove(msgContext.Key, out contextToBeRemoved);
                     }
                 }
                 else
@@ -392,7 +395,8 @@
                         if ((clientConnection.Session != null)
                             && (clientConnection.Session.InflightMessages.ContainsKey(msgContext.Key)))
                         {
-                            clientConnection.Session.InflightMessages.Remove(msgContext.Key);
+                            MqttMsgContext contextToBeRemoved;
+                            clientConnection.Session.InflightMessages.TryRemove(msgContext.Key, out contextToBeRemoved);
                         }
 
                         // if PUBREC for a PUBLISH message not received after retries, raise event for not published
@@ -473,7 +477,8 @@
                 if ((msgInflight.Type == MqttMsgBase.MQTT_MSG_PUBLISH_TYPE) && (clientConnection.Session != null)
                     && (clientConnection.Session.InflightMessages.ContainsKey(msgContext.Key)))
                 {
-                    clientConnection.Session.InflightMessages.Remove(msgContext.Key);
+                    MqttMsgContext contextToBeRemoved;
+                    clientConnection.Session.InflightMessages.TryRemove(msgContext.Key, out contextToBeRemoved);
                 }
             }
 
@@ -506,7 +511,8 @@
                             if ((clientConnection.Session != null)
                                 && (clientConnection.Session.InflightMessages.ContainsKey(msgContext.Key)))
                             {
-                                clientConnection.Session.InflightMessages.Remove(msgContext.Key);
+                                MqttMsgContext contextToBeRemoved;
+                                clientConnection.Session.InflightMessages.TryRemove(msgContext.Key, out contextToBeRemoved);
                             }
 
                             internalEvent = new MsgPublishedInternalEvent(msgInflight, false);

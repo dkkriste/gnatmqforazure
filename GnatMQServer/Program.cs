@@ -14,7 +14,7 @@ namespace GnatMQServer
         {
             var options = new MqttOptions
                               {
-                                  ConnectionsPrProcessingManager = 1024,
+                                  ConnectionsPrProcessingManager = 512,
                                   EndPoint = new IPEndPoint(IPAddress.Any, 1883),
                                   IndividualMessageBufferSize = 8192,
                                   NumberOfAcceptSaea = 256,

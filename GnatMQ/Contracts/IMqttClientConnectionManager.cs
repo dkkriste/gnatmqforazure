@@ -1,6 +1,6 @@
 ﻿namespace GnatMQForAzure.Contracts
 {
-    public interface IMqttClientConnectionManager
+    public interface IMqttClientConnectionManager : IPeriodicallyLoggable
     {
         MqttClientConnection GetConnection();
 

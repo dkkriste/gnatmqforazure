@@ -37,5 +37,15 @@
         public const string NumberOfConnectionsLoadbalanced = "NumberOfConnectionsLoadbalanced";
 
         #endregion
+
+        #region ClientConnectionManager
+
+        public const string NumberOfClientConnectionsGotten = "NumberOfClientConnectionsGotten";
+
+        public const string NumberOfClientConnectionsReturned = "NumberOfClientConnectionsReturned";
+
+        public const string NumberOfClientConnectionsAvailable = "NumberOfClientConnectionsAvailable";
+
+        #endregion
     }
 }

@@ -66,12 +66,11 @@
             try
             {
                 e.AcceptSocket.Shutdown(SocketShutdown.Both);
+                e.AcceptSocket.Close();
             }
             catch (Exception)
             {
             }
-
-            e.AcceptSocket.Close();
 
             var clientConnection = (MqttClientConnection)e.UserToken;
             clientConnection.OnConnectionClosed();

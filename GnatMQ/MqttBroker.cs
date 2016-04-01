@@ -18,6 +18,7 @@ Contributors:
 namespace GnatMQForAzure
 {
     using System.Collections.Concurrent;
+    using System.Collections.Generic;
 
     using GnatMQForAzure.Communication;
     using GnatMQForAzure.Contracts;
@@ -55,13 +56,13 @@ namespace GnatMQForAzure
             this.uacManager = new MqttUacManager();
             this.rawMessageManager = new MqttRawMessageManager(options);
             this.asyncTcpReceiver = new MqttAsyncTcpReceiver(rawMessageManager);
-            this.connectionManager = new MqttClientConnectionManager(options, asyncTcpReceiver);
+            this.connectionManager = new MqttClientConnectionManager(logger, options, asyncTcpReceiver);
 
             var numberOfProcessingManagersNeeded = options.MaxConnections / options.ConnectionsPrProcessingManager;
             this.processingManagers = new MqttClientConnectionProcessingManager[numberOfProcessingManagersNeeded];
             for (var i = 0; i < processingManagers.Length; i++)
             {
-                processingManagers[i] = new MqttClientConnectionProcessingManager(logger, uacManager, asyncTcpReceiver);
+                processingManagers[i] = new MqttClientConnectionProcessingManager(logger, connectionManager, uacManager, asyncTcpReceiver);
             }
 
             this.processingLoadbalancer = new MqttProcessingLoadbalancer(logger, processingManagers);
@@ -103,6 +104,11 @@ namespace GnatMQForAzure
             return null;
         }
 
+        public static ICollection<MqttClientConnection> GetAllConnectedClients()
+        {
+            return AllConnectedClients.Values;
+        }
+
         public static bool TryAddClientConnection(string clientId, MqttClientConnection clientConnection)
         {
             return AllConnectedClients.TryAdd(clientId, clientConnection);
@@ -118,6 +124,7 @@ namespace GnatMQForAzure
             socketListener.Start();
             processingLoadbalancer.Start();
             RetainedMessageManager.Start();
+            MqttKeepAliveManager.Start();
 
             foreach (var processingManager in processingManagers)
             {
@@ -130,7 +137,8 @@ namespace GnatMQForAzure
             socketListener.Stop();
             processingLoadbalancer.Stop();
             RetainedMessageManager.Stop();
-            
+            MqttKeepAliveManager.Stop();
+
             foreach (var processingManager in processingManagers)
             {
                 processingManager.Stop();
@@ -142,11 +150,12 @@ namespace GnatMQForAzure
             logger.LogMetric(this, LoggerConstants.NumberOfConnectedClients, AllConnectedClients.Count);
 
             processingLoadbalancer.PeriodicLogging();
+            connectionManager.PeriodicLogging();
 
-            foreach (var processingManager in processingManagers)
-            {
-                processingManager.PeriodicLogging();
-            }
+            //foreach (var processingManager in processingManagers)
+            //{
+            //    processingManager.PeriodicLogging();
+            //}
         }
     }
 }

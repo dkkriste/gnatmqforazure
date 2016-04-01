@@ -59,10 +59,10 @@ namespace GnatMQForAzure.Managers
             }
             
             // update inflight messages
-            session.InflightMessages = new Hashtable();
+            session.InflightMessages = new ConcurrentDictionary<string, MqttMsgContext>();
             foreach (MqttMsgContext msgContext in clientSession.InflightMessages.Values)
             {
-                session.InflightMessages.Add(msgContext.Key, msgContext);
+                session.InflightMessages.TryAdd(msgContext.Key, msgContext);
             }
         }
 

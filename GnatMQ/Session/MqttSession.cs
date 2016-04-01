@@ -18,6 +18,9 @@ Contributors:
 namespace GnatMQForAzure.Session
 {
     using System.Collections;
+    using System.Collections.Concurrent;
+
+    using GnatMQForAzure.Messages;
 
     /// <summary>
     /// MQTT Session base class
@@ -39,7 +42,7 @@ namespace GnatMQForAzure.Session
         protected MqttSession(string clientId)
         {
             this.ClientId = clientId;
-            this.InflightMessages = new Hashtable();
+            this.InflightMessages = new ConcurrentDictionary<string, MqttMsgContext>();
         }
 
         /// <summary>
@@ -50,7 +53,7 @@ namespace GnatMQForAzure.Session
         /// <summary>
         /// Messages inflight during session
         /// </summary>
-        public Hashtable InflightMessages { get; set; }
+        public ConcurrentDictionary<string, MqttMsgContext> InflightMessages { get; set; }
 
         /// <summary>
         /// Clean session

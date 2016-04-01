@@ -107,9 +107,8 @@
             {
                 MqttAsyncTcpSender.Send(clientConnection.ReceiveSocketAsyncEventArgs.AcceptSocket, msgBytes);
             }
-            catch (Exception e)
+            catch (Exception)
             {
-                throw new MqttCommunicationException(e);
             }
         }
 

@@ -22,6 +22,8 @@
     {
         private readonly ILogger logger;
 
+        private readonly IMqttClientConnectionManager clientConnectionManager;
+
         private readonly MqttPublishManager publishManager;
 
         private readonly MqttUacManager uacManager;
@@ -50,9 +52,10 @@
 
         #endregion
 
-        public MqttClientConnectionProcessingManager(ILogger logger, MqttUacManager uacManager, MqttAsyncTcpReceiver asyncTcpReceiver)
+        public MqttClientConnectionProcessingManager(ILogger logger, IMqttClientConnectionManager clientConnectionManager, MqttUacManager uacManager, MqttAsyncTcpReceiver asyncTcpReceiver)
         {
             this.logger = logger;
+            this.clientConnectionManager = clientConnectionManager;
             this.uacManager = uacManager;
             this.asyncTcpReceiver = asyncTcpReceiver;
             publishManager = new MqttPublishManager(logger);
@@ -342,6 +345,7 @@
 
                 // close the client
                 CloseClientConnection(clientConnection);
+                clientConnectionManager.ReturnConnection(clientConnection);
                 Interlocked.Decrement(ref numberOfConnectedClients);
             }
         }

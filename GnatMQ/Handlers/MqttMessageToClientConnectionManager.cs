@@ -193,7 +193,7 @@
                     {
                         if (clientConnection.Session != null)
                         {
-                            clientConnection.Session.InflightMessages.Add(msgContext.Key, msgContext);
+                            clientConnection.Session.InflightMessages.TryAdd(msgContext.Key, msgContext);
                         }
                     }
                     // to acknowledge and QoS level 2
@@ -202,7 +202,7 @@
                     {
                         if (clientConnection.Session != null)
                         {
-                            clientConnection.Session.InflightMessages.Add(msgContext.Key, msgContext);
+                            clientConnection.Session.InflightMessages.TryAdd(msgContext.Key, msgContext);
                         }
                     }
                 }
