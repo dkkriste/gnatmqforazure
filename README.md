@@ -20,7 +20,6 @@ This project is based on the GnatMQ released here: https://github.com/ppatierno/
 * Retained messages;
 * Will message (QoS, topic and message);
 * Username/Password via a User Access Control;
-* Subscription to topics with wildcards; 
 * Publish and subscribe handle using inflight queue;
 
 Features not included in the current release :
